@@ -1,0 +1,461 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <math.h>
+#include <string>
+#include <FlexLexer.h>
+#include "../include/tree.h"
+extern int yylex(void);
+extern FlexLexer* lexer;
+extern treeNode* root;
+int yyerror(string str);
+using namespace std;
+
+#define YYSTYPE treeNode*
+
+%}
+
+%token LEFT_PAR
+%token RIGHT_PAR
+%token LEFT_CURLY
+%token RIGHT_CURLY
+%token LEFT_SQUARE
+%token RIGHT_SQUARE
+%token COMMA
+%token SEMICOLON
+
+%token IF
+%token ELSE
+%token FOR
+%token WHILE
+%token RETURN
+%token BREAK
+%token CONTINUE
+
+%token ID
+%token NUM
+%token LITERAL
+%token CH
+
+%token INT
+%token FLOAT
+%token CHAR
+%token VOID
+
+%token ADD
+%token SUB
+%token MUL
+%token DIV
+%token ASSIGN
+%token NOT
+%token OR
+%token AND
+%token EQUAL
+%token UEQUAL
+%token GR
+%token GE
+%token LS
+%token LE
+%token ADDR
+
+%%
+doc: stmt {root = new treeNode("doc"); 
+           root->addChild($1);
+           $$ = root;}
+   ;
+stmt: stmt unit {treeNode *node = new treeNode("stmt"); 
+                 node->addChild($1); 
+                 node->addChild($2); 
+                 $$ = node;}
+    | unit {treeNode *node = new treeNode("stmt"); 
+            node->addChild($1); 
+            $$ = node;}
+    ;
+unit: def-stmt SEMICOLON {treeNode *node = new treeNode("unit"); 
+                          node->addChild($1);
+                          node->addChild($2);
+                          $$ = node;}
+    | func {treeNode *node = new treeNode("unit"); 
+            node->addChild($1); 
+            $$ = node;}
+    ;
+func: type ID LEFT_PAR parlist RIGHT_PAR block RIGHT_CURLY {treeNode *node = new treeNode("func"); 
+                                                            node->addChild($1); 
+                                                            node->addChild($2); 
+                                                            node->addChild($3); 
+                                                            node->addChild($4); 
+                                                            node->addChild($5); 
+                                                            node->addChild($6); 
+                                                            node->addChild($7); 
+                                                            $$ = node;}
+    | type ID LEFT_PAR RIGHT_PAR block RIGHT_CURLY  {treeNode *node = new treeNode("func"); 
+                                                     node->addChild($1); 
+                                                     node->addChild($2); 
+                                                     node->addChild($3); 
+                                                     node->addChild($4); 
+                                                     node->addChild($5); 
+                                                     node->addChild($6); 
+                                                     $$ = node;}
+    ;
+block: block stmt2 {treeNode *node = new treeNode("block"); 
+                    node->addChild($1); 
+                    node->addChild($2); 
+                    $$ = node;}
+     | LEFT_CURLY {treeNode *node = new treeNode("block"); 
+                   node->addChild($1); 
+                   $$ = node;}
+     ;
+stmt2: ctrl-stmt {treeNode *node = new treeNode("stmt2"); 
+                  node->addChild($1); 
+                  $$ = node;}
+     | op-stmt SEMICOLON {treeNode *node = new treeNode("stmt2"); 
+                          node->addChild($1); 
+                          node->addChild($2); 
+                          $$ = node;}
+     | ret-stmt SEMICOLON {treeNode *node = new treeNode("stmt2"); 
+                           node->addChild($1); 
+                           node->addChild($2); 
+                           $$ = node;}
+     | BREAK SEMICOLON {treeNode *node = new treeNode("stmt2"); 
+                        node->addChild($1); 
+                        node->addChild($2); 
+                        $$ = node;}
+     | CONTINUE SEMICOLON {treeNode *node = new treeNode("stmt2"); 
+                           node->addChild($1); 
+                           node->addChild($2); 
+                           $$ = node;}
+     ;
+ctrl-stmt: cond-stmt {treeNode *node = new treeNode("ctrl-stmt"); 
+                      node->addChild($1); 
+                      $$ = node;}
+         | for-stmt {treeNode *node = new treeNode("ctrl-stmt"); 
+                     node->addChild($1); 
+                     $$ = node;}
+         | while-stmt {treeNode *node = new treeNode("ctrl-stmt"); 
+                       node->addChild($1); 
+                       $$ = node;}
+         ;
+op-stmt: exp-list {treeNode *node = new treeNode("op-stmt"); 
+                   node->addChild($1); 
+                   $$ = node;}
+       | def-stmt {treeNode *node = new treeNode("op-stmt"); 
+                   node->addChild($1); 
+                   $$ = node;}
+       ;
+cond-stmt: if-stmt elif-list else-stmt {treeNode *node = new treeNode("cond-stmt"); 
+                                        node->addChild($1); 
+                                        node->addChild($2); 
+                                        node->addChild($3); $$ = node;}
+         ;
+if-stmt: IF LEFT_PAR exp RIGHT_PAR block RIGHT_CURLY {treeNode *node = new treeNode("if-stmt"); 
+                                                      node->addChild($1); 
+                                                      node->addChild($2); 
+                                                      node->addChild($3); 
+                                                      node->addChild($4); 
+                                                      node->addChild($5); 
+                                                      node->addChild($6);
+                                                      $$ = node;}
+       ;                          
+else-stmt: ELSE block RIGHT_CURLY {treeNode *node = new treeNode("else-stmt"); 
+                                   node->addChild($1); 
+                                   node->addChild($2); 
+                                   node->addChild($3); 
+                                   $$ = node;}
+         | {treeNode *node = new treeNode("else-stmt");
+            $$ = node;}
+         ;
+elif-list: elif-list ELSE IF LEFT_PAR exp RIGHT_PAR block RIGHT_CURLY {treeNode *node = new treeNode("elif-list"); 
+                                                                       node->addChild($1); 
+                                                                       node->addChild($2); 
+                                                                       node->addChild($3); 
+                                                                       node->addChild($4); 
+                                                                       node->addChild($5); 
+                                                                       node->addChild($6); 
+                                                                       node->addChild($7); 
+                                                                       node->addChild($8); 
+                                                                       $$ = node;}
+         | {treeNode *node = new treeNode("elif-list"); 
+            $$ = node;}
+         ;
+for-stmt: FOR LEFT_PAR op-stmt SEMICOLON exp SEMICOLON op-stmt RIGHT_PAR block RIGHT_CURLY {treeNode *node = new treeNode("for-stmt"); 
+                                                                                            node->addChild($1); 
+                                                                                            node->addChild($2); 
+                                                                                            node->addChild($3); 
+                                                                                            node->addChild($4); 
+                                                                                            node->addChild($5); 
+                                                                                            node->addChild($6); 
+                                                                                            node->addChild($7); 
+                                                                                            node->addChild($8); 
+                                                                                            node->addChild($9); 
+                                                                                            node->addChild($10); 
+                                                                                            $$ = node;}
+        ;
+while-stmt: WHILE LEFT_PAR exp RIGHT_PAR block RIGHT_CURLY {treeNode *node = new treeNode("while-stmt"); 
+                                                            node->addChild($1); 
+                                                            node->addChild($2); 
+                                                            node->addChild($3); 
+                                                            node->addChild($4); 
+                                                            node->addChild($5); 
+                                                            node->addChild($6); 
+                                                            $$ = node;}
+          ;
+exp-list: exp-list COMMA exp {treeNode *node = new treeNode("exp-list"); 
+                              node->addChild($1); 
+                              node->addChild($2); 
+                              node->addChild($3); 
+                              $$ = node;}
+        | exp {treeNode *node = new treeNode("exp-list"); 
+               node->addChild($1); 
+               $$ = node;}
+        ;
+def-stmt: type def-stmt2 {treeNode *node = new treeNode("def-stmt"); 
+                          node->addChild($1); 
+                          node->addChild($2); 
+                          $$ = node;}
+        ;
+def-stmt2: def-stmt2 COMMA def-stmt3 {treeNode *node = new treeNode("def-stmt2"); 
+                                      node->addChild($1); 
+                                      node->addChild($2); 
+                                      node->addChild($3); 
+                                      $$ = node;}
+         | def-stmt3 {treeNode *node = new treeNode("def-stmt2"); 
+                      node->addChild($1); 
+                      $$ = node;}
+         ;
+def-stmt3: ID ASSIGN exp {treeNode *node = new treeNode("def-stmt3"); 
+                          node->addChild($1); 
+                          node->addChild($2); 
+                          node->addChild($3); 
+                          $$ = node;}
+         | ID subsript-list {treeNode *node = new treeNode("def-stmt3"); 
+                             node->addChild($1); 
+                             node->addChild($2); 
+                             $$ = node;}
+         | ID {treeNode *node = new treeNode("def-stmt3"); 
+                              node->addChild($1); 
+                              $$ = node;}
+         | ID subsript-list ASSIGN LEFT_CURLY varlist RIGHT_CURLY {treeNode *node = new treeNode("def-stmt3"); 
+                                                                   node->addChild($1); 
+                                                                   node->addChild($2); 
+                                                                   node->addChild($3); 
+                                                                   node->addChild($4); 
+                                                                   node->addChild($5); 
+                                                                   node->addChild($6);
+                                                                   $$ = node;}
+         ;
+var: ID {treeNode *node = new treeNode("var"); 
+         node->addChild($1); 
+         $$ = node;}
+   | ID subsript-list {treeNode *node = new treeNode("var"); 
+                       node->addChild($1); 
+                       node->addChild($2); 
+                       $$ = node;}
+   ;
+subsript-list: subsript-list subsript {treeNode *node = new treeNode("subsript-list"); 
+                                       node->addChild($1); 
+                                       node->addChild($2); 
+                                       $$ = node;}
+             | subsript {treeNode *node = new treeNode("subsript-list"); 
+                         node->addChild($1); 
+                         $$ = node;}
+             ;
+subsript: LEFT_SQUARE exp RIGHT_SQUARE {treeNode *node = new treeNode("subsript"); 
+                                        node->addChild($1); 
+                                        node->addChild($2); 
+                                        node->addChild($3); 
+                                        $$ = node;}
+        ;
+ret-stmt: RETURN exp {treeNode *node = new treeNode("ret-stmt"); 
+                      node->addChild($1); 
+                      node->addChild($2); 
+                      $$ = node;}
+        ;
+parlist: VOID {treeNode *node = new treeNode("parlist"); 
+               node->addChild($1); 
+               $$ = node;}
+       | NEparlist {treeNode *node = new treeNode("parlist"); 
+                    node->addChild($1); 
+                    $$ = node;}
+       ;
+NEparlist: NEparlist COMMA dec-stmt {treeNode *node = new treeNode("NEparlist"); 
+                                     node->addChild($1); 
+                                     node->addChild($2); 
+                                     node->addChild($3); 
+                                     $$ = node;}
+       | dec-stmt {treeNode *node = new treeNode("NEparlist"); 
+                   node->addChild($1); 
+                   $$ = node;}
+       ;
+dec-stmt: type ID {treeNode *node = new treeNode("dec-stmt"); 
+                   node->addChild($1); 
+                   node->addChild($2); 
+                   $$ = node;}
+                   
+        | type ID LEFT_SQUARE RIGHT_SQUARE {treeNode *node = new treeNode("dec-stmt"); 
+                                            node->addChild($1); 
+                                            node->addChild($2); 
+                                            node->addChild($3); 
+                                            node->addChild($4); 
+                                            $$ = node;}
+        ;
+type: INT {treeNode *node = new treeNode("type"); node->addChild($1); $$ = node;}
+    | FLOAT {treeNode *node = new treeNode("type"); node->addChild($1); $$ = node;}
+    | CHAR  {treeNode *node = new treeNode("type"); node->addChild($1); $$ = node;}
+    | VOID  {treeNode *node = new treeNode("type"); node->addChild($1); $$ = node;}
+    ;
+// ()
+// func id
+// &
+// ! -(uni)
+// * /
+// + -
+// > < >= <= 
+// == !=
+// &&
+// || 
+exp: var ASSIGN exp {treeNode *node = new treeNode("exp"); node->addChild($1); node->addChild($2); node->addChild($3); $$ = node;}
+   | exp0 {treeNode *node = new treeNode("exp"); node->addChild($1); $$ = node;}
+   ;
+   
+exp0: exp0 OR exp1 {treeNode *node = new treeNode("exp0"); node->addChild($1); node->addChild($2); node->addChild($3); $$ = node;}
+   | exp1 {treeNode *node = new treeNode("exp0"); node->addChild($1); $$ = node;}
+   ;
+   
+exp1: exp1 AND exp2 {treeNode *node = new treeNode("exp1"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp2 {treeNode *node = new treeNode("exp1"); node->addChild($1);$$ = node;}
+    ;
+    
+exp2: exp2 EQUAL  exp3 {treeNode *node = new treeNode("exp2"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp2 UEQUAL exp3 {treeNode *node = new treeNode("exp2"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp3 {treeNode *node = new treeNode("exp2"); 
+            node->addChild($1);
+            $$ = node;}
+    ;
+    
+exp3: exp3 GR exp4 {treeNode *node = new treeNode("exp3"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp3 GE exp4 {treeNode *node = new treeNode("exp3"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp3 LS exp4 {treeNode *node = new treeNode("exp3"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp3 LE exp4 {treeNode *node = new treeNode("exp3"); node->addChild($1); node->addChild($2);node->addChild($3);$$ = node;}
+    | exp4  {treeNode *node = new treeNode("exp3"); 
+             node->addChild($1); 
+             $$ = node;}
+    ;
+
+exp4: exp4 ADD exp5 {treeNode *node = new treeNode("exp4"); 
+                     node->addChild($1); 
+                     node->addChild($2);
+                     node->addChild($3);
+                     $$ = node;}
+                     
+    | exp4 SUB exp5 {treeNode *node = new treeNode("exp4"); 
+                     node->addChild($1); 
+                     node->addChild($2);
+                     node->addChild($3);
+                     $$ = node;}
+                     
+    | exp5 {treeNode *node = new treeNode("exp4"); 
+            node->addChild($1); 
+            $$ = node;}
+    ;
+    
+exp5: exp5 MUL exp6 {treeNode *node = new treeNode("exp5"); 
+                     node->addChild($1); 
+                     node->addChild($2);
+                     node->addChild($3);
+                     $$ = node;}
+
+    | exp5 DIV exp6 {treeNode *node = new treeNode("exp5"); 
+                     node->addChild($1); 
+                     node->addChild($2);
+                     node->addChild($3);
+                     $$ = node;}
+                     
+    | exp6    {treeNode *node = new treeNode("exp5"); 
+               node->addChild($1);
+               $$ = node;}
+    ;
+    
+exp6: SUB exp6 {treeNode *node = new treeNode("exp6"); 
+                node->addChild($1); 
+                node->addChild($2);
+                $$ = node;}
+                
+    | NOT exp6 {treeNode *node = new treeNode("exp6"); 
+                node->addChild($1); 
+                node->addChild($2);
+                $$ = node;}
+                
+    | exp7 {treeNode *node = new treeNode("exp6"); 
+            node->addChild($1); 
+            $$ = node;}
+    ;
+    
+exp7: ADDR exp7  {treeNode *node = new treeNode("exp7"); 
+                  node->addChild($1); 
+                  node->addChild($2);
+                  $$ = node;}
+    | exp8       {treeNode *node = new treeNode("exp7"); 
+                  node->addChild($1);
+                  $$ = node;}                 
+    ;
+
+exp8: LEFT_PAR exp RIGHT_PAR {treeNode *node = new treeNode("exp8"); 
+                              node->addChild($1); 
+                              node->addChild($2);
+                              node->addChild($3);
+                              $$ = node;}
+                              
+    | NUM {treeNode *node = new treeNode("exp8"); 
+           node->addChild($1); 
+           $$ = node;}
+           
+    | ID LEFT_PAR varlist RIGHT_PAR {treeNode *node = new treeNode("exp8"); 
+                                     node->addChild($1); 
+                                     node->addChild($2);
+                                     node->addChild($3);
+                                     node->addChild($4);
+                                     $$ = node;}
+                                     
+    | ID LEFT_PAR RIGHT_PAR {treeNode *node = new treeNode("exp8"); 
+                             node->addChild($1);                               
+                             node->addChild($2);
+                             node->addChild($3);
+                             $$ = node;}
+                             
+    | ID subsript-list {treeNode *node = new treeNode("exp8"); 
+                        node->addChild($1);  
+                        node->addChild($2);
+                        $$ = node;}
+
+    | ID {treeNode *node = new treeNode("exp8"); 
+          node->addChild($1); 
+          $$ = node;}
+
+    | LITERAL {treeNode *node = new treeNode("exp8"); 
+               node->addChild($1); 
+               $$ = node;}
+
+    | CH {treeNode *node = new treeNode("exp8"); 
+          node->addChild($1); 
+          $$ = node;}
+    ;
+    
+varlist: varlist COMMA exp {treeNode *node = new treeNode("varlist"); 
+                            node->addChild($1); 
+                            node->addChild($2);
+                            node->addChild($3); 
+                            $$ = node;}
+
+       | exp               {treeNode *node = new treeNode("varlist"); 
+                            node->addChild($1); 
+                            $$ = node;}
+       ;
+
+%%
+
+int yyerror(string str)
+{ 
+    fprintf(stderr, "[ERROR] %s\n", lexer->YYText());
+    return 0;
+}
