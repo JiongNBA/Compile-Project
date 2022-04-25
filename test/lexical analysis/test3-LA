@@ -1,0 +1,207 @@
+/* ----------------------------------------------------------
+ * file: test3.c
+ * author: Haofeng Yang 3190105301@zju.edu.cn
+ *         Yuesong Wang 3190105303@zju.edu.cn
+ *         Jiong   Li   3190105725@zju.edu.cn
+ * ----------------------------------------------------------
+ * function: a simple class-choosing system
+ * description: according to the given message provids credit
+ * 				 data and advice
+ * ----------------------------------------------------------
+ * create date:   2022/4/15 4:01 pm
+ * last modified: 2022/4/15 10:16 pm
+ * ----------------------------------------------------------
+ * history: 2022/4/15 4:01 pm create the file
+ *          2022/4/15 10:16 pm finish the codes
+ */
+// #include <stdio.h>
+// #include <string.h>
+
+//varibles' definition
+[WHITESPACE] char[CHAR]  [WHITESPACE] name[ID] [[LEFT_SQUARE] 100[INT_VAL] ][RIGHT_SQUARE] [[LEFT_SQUARE] 6[INT_VAL] ][RIGHT_SQUARE] ;[SEMICOLON] 
+[WHITESPACE] int[INT]   [WHITESPACE] credit[ID] [[LEFT_SQUARE] 100[INT_VAL] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] {[LEFT_CURLY] 0[INT_VAL] }[RIGHT_CURLY] ;[SEMICOLON] 
+[WHITESPACE] char[CHAR]  [WHITESPACE] precourse[ID] [[LEFT_SQUARE] 100[INT_VAL] ][RIGHT_SQUARE] [[LEFT_SQUARE] 300[INT_VAL] ][RIGHT_SQUARE] ;[SEMICOLON] 
+[WHITESPACE] char[CHAR]  [WHITESPACE] grade[ID] [[LEFT_SQUARE] 100[INT_VAL] ][RIGHT_SQUARE] ;[SEMICOLON] 
+[WHITESPACE] char[CHAR]  [WHITESPACE] passcourse[ID] [[LEFT_SQUARE] 100[INT_VAL] ][RIGHT_SQUARE] [[LEFT_SQUARE] 6[INT_VAL] ][RIGHT_SQUARE] ;[SEMICOLON] 
+[WHITESPACE] int[INT]  [WHITESPACE] remainCourse[ID] [[LEFT_SQUARE] 100[INT_VAL] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] {[LEFT_CURLY] 0[INT_VAL] }[RIGHT_CURLY] ;[SEMICOLON] 
+
+[WHITESPACE] int[INT]  [WHITESPACE] Hours_Attempted[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] int[INT]  [WHITESPACE] Hours_Completed[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] int[INT]  [WHITESPACE] Remaining_Credits[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] int[INT]  [WHITESPACE] i[ID] =[ASSIGN] 0[INT_VAL] ;[SEMICOLON]  // The index of input course
+[WHITESPACE] int[INT]  [WHITESPACE] j[ID] =[ASSIGN] 0[INT_VAL] ;[SEMICOLON]  // The index of passcourse
+[WHITESPACE] int[INT]  [WHITESPACE] k[ID] =[ASSIGN] 0[INT_VAL] ;[SEMICOLON]  // The index of remain course
+[WHITESPACE] float[FLOAT]  [WHITESPACE] sum[ID] =[ASSIGN] 0[INT_VAL] ;[SEMICOLON]  //The sum of multiply credits by course grade
+[WHITESPACE] char[CHAR]  [WHITESPACE] ch[ID] ;[SEMICOLON] 
+[WHITESPACE] int[INT]  [WHITESPACE] info_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] int[INT]  [WHITESPACE] char_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+
+// input the courses' name, credit and precourses
+[WHITESPACE] void[VOID]  [WHITESPACE] readIn[ID] ([LEFT_PAR] void[VOID] )[RIGHT_PAR] 
+[WHITESPACE] {[LEFT_CURLY] 
+    [WHITESPACE] while[WHILE] ([LEFT_PAR]  [WHITESPACE] ([LEFT_PAR] ch[ID] =[ASSIGN] getchar[ID] ([LEFT_PAR] )[RIGHT_PAR] )[RIGHT_PAR]  [WHITESPACE] !=[UEQUAL]  [WHITESPACE] '|'[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+        [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] info_idx[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+            [WHITESPACE] name[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] [[LEFT_SQUARE] char_idx[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ch[ID] ;[SEMICOLON] 
+        [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] if[IF]  [WHITESPACE] ([LEFT_PAR]  [WHITESPACE] info_idx[ID] ==[EQUAL] 1[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+            [WHITESPACE] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ch[ID] ;[SEMICOLON] 
+        [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] {[LEFT_CURLY] 
+            [WHITESPACE] precourse[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] [[LEFT_SQUARE] char_idx[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ch[ID] ;[SEMICOLON] 
+        [WHITESPACE] }[RIGHT_CURLY] 
+        
+        [WHITESPACE] char_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] char_idx[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+    [WHITESPACE] }[RIGHT_CURLY] 
+    [WHITESPACE] char_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+    [WHITESPACE] info_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] info_idx[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] }[RIGHT_CURLY] 
+
+// print the message of the courses
+[WHITESPACE] void[VOID]  [WHITESPACE] prtCredit[ID] ([LEFT_PAR] void[VOID] )[RIGHT_PAR] 
+[WHITESPACE] {[LEFT_CURLY] 
+    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] Hours_Attempted[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+        [WHITESPACE] printf[ID] ([LEFT_PAR] "GPA: 0.0\n"[LITERAL] )[RIGHT_PAR] ;[SEMICOLON] 
+    [WHITESPACE] }[RIGHT_CURLY] else[ELSE] {[LEFT_CURLY] 
+        [WHITESPACE] printf[ID] ([LEFT_PAR] "GPA: %.1f\n"[LITERAL] ,[COMMA]  [WHITESPACE] sum[ID] /[DIV] Hours_Attempted[ID] )[RIGHT_PAR] ;[SEMICOLON]  //output the GPA
+    [WHITESPACE] }[RIGHT_CURLY] 
+    
+    [WHITESPACE] printf[ID] ([LEFT_PAR] "Hours Attempted: %d\n"[LITERAL] ,[COMMA]  [WHITESPACE] Hours_Attempted[ID] )[RIGHT_PAR] ;[SEMICOLON]  // output the attempted hours
+    [WHITESPACE] printf[ID] ([LEFT_PAR] "Hours Completed: %d\n"[LITERAL] ,[COMMA]  [WHITESPACE] Hours_Completed[ID] )[RIGHT_PAR] ;[SEMICOLON]  // output the completed hours
+    [WHITESPACE] printf[ID] ([LEFT_PAR] "Credits Remaining: %d\n"[LITERAL] ,[COMMA]  [WHITESPACE] Remaining_Credits[ID] )[RIGHT_PAR] ;[SEMICOLON]  //output the remaining credits
+    [WHITESPACE] printf[ID] ([LEFT_PAR] "\nPossible Courses to Take Next\n"[LITERAL] )[RIGHT_PAR] ;[SEMICOLON] 
+
+[WHITESPACE] }[RIGHT_CURLY] 
+
+// find wheteher current course has been passed
+// :param cur: the name of current course
+// :return: if passed return 1 else return 0
+[WHITESPACE] int[INT]  [WHITESPACE] ifFind[ID] ([LEFT_PAR] char[CHAR]  [WHITESPACE] cur[ID] [[LEFT_SQUARE] ][RIGHT_SQUARE] )[RIGHT_PAR] 
+[WHITESPACE] {[LEFT_CURLY] 
+    [WHITESPACE] for[FOR] ([LEFT_PAR]  [WHITESPACE] int[INT]  [WHITESPACE] n[ID] =[ASSIGN] 0[INT_VAL] ;[SEMICOLON]  [WHITESPACE] n[ID] <[LS] 100[INT_VAL] ;[SEMICOLON]  [WHITESPACE] n[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] n[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // find in passed course
+        [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] strcmp[ID] ([LEFT_PAR] cur[ID] ,[COMMA]  [WHITESPACE] passcourse[ID] [[LEFT_SQUARE] n[ID] ][RIGHT_SQUARE] )[RIGHT_PAR] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // if there is one course in the set being studied
+            [WHITESPACE] return[RETURN]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+            [WHITESPACE] break[BREAK] ;[SEMICOLON] 
+        [WHITESPACE] }[RIGHT_CURLY] 
+    [WHITESPACE] }[RIGHT_CURLY] 
+    [WHITESPACE] return[RETURN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] }[RIGHT_CURLY] 
+
+[WHITESPACE] int[INT]  [WHITESPACE] main[ID] ([LEFT_PAR] )[RIGHT_PAR] {[LEFT_CURLY] 
+    
+    // initialize
+    [WHITESPACE] memset[ID] ([LEFT_PAR] name[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 100[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] 6[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+    [WHITESPACE] memset[ID] ([LEFT_PAR] precourse[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 100[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] 300[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+    [WHITESPACE] memset[ID] ([LEFT_PAR] grade[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 100[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+    [WHITESPACE] memset[ID] ([LEFT_PAR] passcourse[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 100[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] 6[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+
+    // input courses' messages
+    [WHITESPACE] while[WHILE] ([LEFT_PAR] ([LEFT_PAR] ch[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] getchar[ID] ([LEFT_PAR] )[RIGHT_PAR] )[RIGHT_PAR]  [WHITESPACE] !=[UEQUAL]  [WHITESPACE] '\n'[CH] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+        // current ch is the 1st ch of CNAME
+        [WHITESPACE] name[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] [[LEFT_SQUARE] char_idx[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ch[ID] ;[SEMICOLON] 
+        [WHITESPACE] char_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] char_idx[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+        // CNAME, CREDIT, PREC
+        [WHITESPACE] readIn[ID] ([LEFT_PAR] )[RIGHT_PAR] ;[SEMICOLON]  // input CNAME
+        [WHITESPACE] readIn[ID] ([LEFT_PAR] )[RIGHT_PAR] ;[SEMICOLON]  // input CREDIT
+        [WHITESPACE] readIn[ID] ([LEFT_PAR] )[RIGHT_PAR] ;[SEMICOLON]  // input PREC
+        [WHITESPACE] if[IF] ([LEFT_PAR] ([LEFT_PAR] ch[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] getchar[ID] ([LEFT_PAR] )[RIGHT_PAR] )[RIGHT_PAR]  [WHITESPACE] !=[UEQUAL]  [WHITESPACE] '\n'[CH] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // input grade
+            [WHITESPACE] grade[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ch[ID] ;[SEMICOLON] 
+            [WHITESPACE] getchar[ID] ([LEFT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+        [WHITESPACE] }[RIGHT_CURLY] 
+        [WHITESPACE] char_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+        [WHITESPACE] info_idx[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                
+        [WHITESPACE] if[IF] ([LEFT_PAR] grade[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE]  [WHITESPACE] >=[GE]  [WHITESPACE] 'A'[CH]  [WHITESPACE] &&[AND]  [WHITESPACE] grade[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] <=[LE] 'D'[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  //  has passed the course
+            [WHITESPACE] sum[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] sum[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] ([LEFT_PAR] 'E'[CH] -[SUB] grade[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] )[RIGHT_PAR] *[MUL] ([LEFT_PAR] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] -[SUB] '0'[CH] )[RIGHT_PAR] ;[SEMICOLON]              // the score is added to total grade
+            [WHITESPACE] Hours_Attempted[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] Hours_Attempted[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] ([LEFT_PAR] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] -[SUB] '0'[CH] )[RIGHT_PAR] ;[SEMICOLON]  // the credit is added to attempt credit
+            [WHITESPACE] Hours_Completed[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] Hours_Completed[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] ([LEFT_PAR] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] -[SUB] '0'[CH] )[RIGHT_PAR] ;[SEMICOLON]  // the credit is added to completed credit
+            [WHITESPACE] strcpy[ID] ([LEFT_PAR] passcourse[ID] [[LEFT_SQUARE] j[ID] ][RIGHT_SQUARE] ,[COMMA]  [WHITESPACE] name[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] )[RIGHT_PAR] ;[SEMICOLON]  // the course is added to passed courses
+            [WHITESPACE] j[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] j[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON]  // the index of passed courses plus 1
+        [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] grade[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] ==[EQUAL] 'F'[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  //  not pass the course
+            [WHITESPACE] Hours_Attempted[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] Hours_Attempted[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] ([LEFT_PAR] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] -[SUB] '0'[CH] )[RIGHT_PAR] ;[SEMICOLON]      // the credit is added to attempt credit
+            [WHITESPACE] Remaining_Credits[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] Remaining_Credits[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] ([LEFT_PAR] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] -[SUB] '0'[CH] )[RIGHT_PAR] ;[SEMICOLON]  // the credit is added to remaining credit
+            [WHITESPACE] remainCourse[ID] [[LEFT_SQUARE] k[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] i[ID] ;[SEMICOLON]  // the course is added to remain course
+            [WHITESPACE] k[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] k[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON]  // the index of remain courses plus 1
+        [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] {[LEFT_CURLY]  // the course has not been studied
+            [WHITESPACE] Remaining_Credits[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] Remaining_Credits[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] ([LEFT_PAR] credit[ID] [[LEFT_SQUARE] i[ID] ][RIGHT_SQUARE] -[SUB] '0'[CH] )[RIGHT_PAR] ;[SEMICOLON]  // the credit is added to remaining credit
+            [WHITESPACE] remainCourse[ID] [[LEFT_SQUARE] k[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] i[ID] ;[SEMICOLON]  // the course is added to remain course
+            [WHITESPACE] k[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] k[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON]  // the index of remain courses plus 1
+        [WHITESPACE] }[RIGHT_CURLY] 
+
+        [WHITESPACE] i[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] i[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON]  // the index of input courses plus 1
+    [WHITESPACE] }[RIGHT_CURLY] 
+    
+    [WHITESPACE] prtCredit[ID] ([LEFT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+    
+    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] k[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  //there is no course remained
+        [WHITESPACE] printf[ID] ([LEFT_PAR] "  None - Congratulations!\n"[LITERAL] )[RIGHT_PAR] ;[SEMICOLON]  // output no remains tips
+    [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] {[LEFT_CURLY] 
+        [WHITESPACE] for[FOR] ([LEFT_PAR]  [WHITESPACE] int[INT]  [WHITESPACE] m[ID] =[ASSIGN] 0[INT_VAL] ;[SEMICOLON]  [WHITESPACE] m[ID] <[LS] k[ID] ;[SEMICOLON]  [WHITESPACE] m[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] m[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+            [WHITESPACE] int[INT]  [WHITESPACE] canStudy[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON]  // assume the course can be studied
+            [WHITESPACE] int[INT]  [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON]   // judge if two courses are same
+            [WHITESPACE] int[INT]  [WHITESPACE] preIndex[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON]  // the index of precourse's name
+            [WHITESPACE] int[INT]  [WHITESPACE] isChecked[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+            [WHITESPACE] char[CHAR]  [WHITESPACE] pre[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] precourse[ID] [[LEFT_SQUARE] remainCourse[ID] [[LEFT_SQUARE] m[ID] ][RIGHT_SQUARE] ][RIGHT_SQUARE] [[LEFT_SQUARE] preIndex[ID] ][RIGHT_SQUARE] ;[SEMICOLON] 
+            
+            [WHITESPACE] char[CHAR]  [WHITESPACE] cur[ID] [[LEFT_SQUARE] 6[INT_VAL] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] {[LEFT_CURLY] '\0'[CH] }[RIGHT_CURLY] ;[SEMICOLON]  // current precourse's name
+            [WHITESPACE] memset[ID] ([LEFT_PAR] cur[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 6[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+            [WHITESPACE] int[INT]  [WHITESPACE] cnt[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+            [WHITESPACE] while[WHILE] ([LEFT_PAR]  [WHITESPACE] pre[ID] !=[UEQUAL] '\0'[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // while there exists precourses
+                [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] pre[ID] ==[EQUAL] ','[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // ',' means "and"
+                    [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] isChecked[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] cnt[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] canStudy[ID]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+                        [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ifFind[ID] ([LEFT_PAR] cur[ID] )[RIGHT_PAR] ;[SEMICOLON] 
+                        [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] isSame[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // the precourse is not passed
+                            [WHITESPACE] canStudy[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                        [WHITESPACE] }[RIGHT_CURLY] 
+                    [WHITESPACE] }[RIGHT_CURLY] 
+                    [WHITESPACE] memset[ID] ([LEFT_PAR] cur[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 6[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+                [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] pre[ID] ==[EQUAL] ';'[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // ';' means "or"
+                    [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] isChecked[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] cnt[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] canStudy[ID]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+                        [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ifFind[ID] ([LEFT_PAR] cur[ID] )[RIGHT_PAR] ;[SEMICOLON] 
+                    [WHITESPACE] }[RIGHT_CURLY] 
+                    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] isSame[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // the precourse is not passed
+                        [WHITESPACE] canStudy[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] }[RIGHT_CURLY] 
+                    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] canStudy[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // the set cannot be studied
+                        [WHITESPACE] canStudy[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON]    // enter next set
+                    [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] {[LEFT_CURLY] 
+                        [WHITESPACE] break[BREAK] ;[SEMICOLON] 
+                    [WHITESPACE] }[RIGHT_CURLY] 
+                    [WHITESPACE] memset[ID] ([LEFT_PAR] cur[ID] ,[COMMA]  [WHITESPACE] '\0'[CH] ,[COMMA]  [WHITESPACE] 6[INT_VAL]  [WHITESPACE] *[MUL]  [WHITESPACE] sizeof[ID] ([LEFT_PAR] char[CHAR] )[RIGHT_PAR] )[RIGHT_PAR] ;[SEMICOLON] 
+                [WHITESPACE] }[RIGHT_CURLY] else[ELSE]  [WHITESPACE] {[LEFT_CURLY] 
+                    [WHITESPACE] cur[ID] [[LEFT_SQUARE] cnt[ID] ][RIGHT_SQUARE]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] pre[ID] ;[SEMICOLON] 
+                    [WHITESPACE] cnt[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] cnt[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+                    [WHITESPACE] isChecked[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                [WHITESPACE] }[RIGHT_CURLY] 
+                [WHITESPACE] preIndex[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] preIndex[ID]  [WHITESPACE] +[ADD]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+                [WHITESPACE] pre[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] precourse[ID] [[LEFT_SQUARE] remainCourse[ID] [[LEFT_SQUARE] m[ID] ][RIGHT_SQUARE] ][RIGHT_SQUARE] [[LEFT_SQUARE] preIndex[ID] ][RIGHT_SQUARE] ;[SEMICOLON] 
+            [WHITESPACE] }[RIGHT_CURLY] 
+
+            [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] canStudy[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // if precourses are not taken
+                [WHITESPACE] continue[CONTINUE] ;[SEMICOLON] 
+            [WHITESPACE] }[RIGHT_CURLY] 
+            [WHITESPACE] else[ELSE]  [WHITESPACE] {[LEFT_CURLY] 
+                [WHITESPACE] if[IF]  [WHITESPACE] ([LEFT_PAR]  [WHITESPACE] cur[ID] [[LEFT_SQUARE] 0[INT_VAL] ][RIGHT_SQUARE] ==[EQUAL] '\0'[CH]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+                    [WHITESPACE] canStudy[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 1[INT_VAL] ;[SEMICOLON] 
+                [WHITESPACE] }[RIGHT_CURLY] 
+                [WHITESPACE] else[ELSE]  [WHITESPACE] {[LEFT_CURLY] 
+                    [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] isChecked[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+                        [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                        [WHITESPACE] isSame[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] ifFind[ID] ([LEFT_PAR] cur[ID] )[RIGHT_PAR] ;[SEMICOLON] 
+                        [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] isSame[ID] ==[EQUAL] 0[INT_VAL]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY] 
+                            [WHITESPACE] canStudy[ID]  [WHITESPACE] =[ASSIGN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+                        [WHITESPACE] }[RIGHT_CURLY] 
+                    [WHITESPACE] }[RIGHT_CURLY] 
+                [WHITESPACE] }[RIGHT_CURLY] 
+                [WHITESPACE] if[IF] ([LEFT_PAR]  [WHITESPACE] canStudy[ID]  [WHITESPACE] )[RIGHT_PAR]  [WHITESPACE] {[LEFT_CURLY]  // if the course can be studied
+                    [WHITESPACE] printf[ID] ([LEFT_PAR] "  %s\n"[LITERAL] ,[COMMA] name[ID] [[LEFT_SQUARE] remainCourse[ID] [[LEFT_SQUARE] m[ID] ][RIGHT_SQUARE] ][RIGHT_SQUARE] )[RIGHT_PAR] ;[SEMICOLON]  // output the course
+                [WHITESPACE] }[RIGHT_CURLY] 
+            [WHITESPACE] }[RIGHT_CURLY] 
+        [WHITESPACE] }[RIGHT_CURLY] 
+    [WHITESPACE] }[RIGHT_CURLY] 
+    [WHITESPACE] return[RETURN]  [WHITESPACE] 0[INT_VAL] ;[SEMICOLON] 
+[WHITESPACE] }[RIGHT_CURLY] 
+[WHITESPACE] 
