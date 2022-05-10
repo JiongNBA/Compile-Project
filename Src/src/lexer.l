@@ -4,15 +4,22 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include "../include/tree.h"
-#define YYSTYPE treeNode*
+#include "../include/AST.h"
+#define YYSTYPE BaseAST *
 #include "parser.tab.hpp"
 
-extern FlexLexer* lexer;
+extern FlexLexer *lexer;
 
 using namespace std;
 
+BaseAST *lastId;
+
+char parseChar(string str);
+string parseStr(string str);
+
 %}
+
+%option yylineno
 
 unsign_float ([1-9][0-9]*|0)\.[0-9]*|\.[0-9]+
 unsign_int [1-9][0-9]*|0 
@@ -22,48 +29,50 @@ whitespace ("\t"|" "|"\n"|(("\/\*""\/"*([^\*\/]|[^\*]"\/"|"\*"[^\/])*("\*")*"\*\
 id [\_a-zA-Z][a-zA-Z0-9\_]*
 %%
 
-\+ {yylval = new treeNode("ADD"); return ADD;}
-\- {yylval = new treeNode("SUB"); return SUB;}
-\* {yylval = new treeNode("MUL"); return MUL;}
-\/ {yylval = new treeNode("DIV"); return DIV;}
-\= {yylval = new treeNode("ASSIGN"); return ASSIGN;}
-\! {yylval = new treeNode("NOT"); return NOT;}
-\& {yylval = new treeNode("ADDR"); return ADDR;}
-\|\| {yylval = new treeNode("OR"); return OR;}
-\&\& {yylval = new treeNode("AND"); return AND;}
-\=\= {yylval = new treeNode("EQUAL"); return EQUAL;}
-\!\= {yylval = new treeNode("UEQUAL"); return UEQUAL;}
-\> {yylval = new treeNode("GR"); return GR;}
-\>\= {yylval = new treeNode("GE"); return GE;}
-\< {yylval = new treeNode("LS"); return LS;}
-\<\= {yylval = new treeNode("LE"); return LE;}
-\( {yylval = new treeNode("LEFT_PAR"); return LEFT_PAR;}
-\) {yylval = new treeNode("RIGHT_PAR"); return RIGHT_PAR;}
-\{ {yylval = new treeNode("LEFT_CURLY"); return LEFT_CURLY;}
-\} {yylval = new treeNode("RIGHT_CURLY"); return RIGHT_CURLY;}
-\[ {yylval = new treeNode("LEFT_SQUARE"); return LEFT_SQUARE;}
-\] {yylval = new treeNode("RIGHT_SQUARE"); return RIGHT_SQUARE;}
-\; {yylval = new treeNode("SEMICOLON"); return SEMICOLON;}
-\, {yylval = new treeNode("COMMA"); return COMMA;}
-if {yylval = new treeNode("IF"); return IF;}
-else {yylval = new treeNode("ELSE"); return ELSE;}
-for {yylval = new treeNode("FOR"); return FOR;}
-while {yylval = new treeNode("WHILE");return WHILE;}
-return {yylval = new treeNode("RETURN"); return RETURN;}
-break {yylval = new treeNode("BREAK"); return BREAK;}
-continue {yylval = new treeNode("CONTINUE"); return CONTINUE;}
-int {yylval = new treeNode("INT"); return INT;}
-float {yylval = new treeNode("FLOAT"); return FLOAT;}
-char {yylval = new treeNode("CHAR"); return CHAR;}
-void {yylval = new treeNode("VOID"); return VOID;}
-{literal} {yylval = new treeNode("LITERAL"); return LITERAL;}
-{char} {yylval = new treeNode("CH"); return CH;}
-{unsign_float} {yylval = new treeNode("NUM"); return NUM;}
-{unsign_int} {yylval = new treeNode("NUM"); return NUM;}
-{id} {yylval = new treeNode("ID"); return ID;}
+\+ {return ADD;}
+\- {return SUB;}
+\* {return MUL;}
+\/ {return DIV;}
+\= {return ASSIGN;}
+\! {return NOT;}
+\& {return ADDR;}
+\|\| {return OR;}
+\&\& {return AND;}
+\=\= {return EQUAL;}
+\!\= {return UEQUAL;}
+\> {return GR;}
+\>\= {return GE;}
+\< {return LS;}
+\<\= {return LE;}
+\( {return LEFT_PAR;}
+\) {return RIGHT_PAR;}
+\{ {return LEFT_CURLY;}
+\} {return RIGHT_CURLY;}
+\[ {return LEFT_SQUARE;}
+\] {return RIGHT_SQUARE;}
+\; {return SEMICOLON;}
+\, {return COMMA;}
+if {return IF;}
+else {return ELSE;}
+for {return FOR;}
+while {return WHILE;}
+return {return RETURN;}
+break {return BREAK;}
+continue {return CONTINUE;}
+int {return INT;}
+float {return FLOAT;}
+char {return CHAR;}
+void {return VOID;}
+{literal} {Val val = parseStr(string(lexer->YYText())); yylval = new TokenAST(val, "LITERAL"); return LITERAL;}
+{char} {Val val = parseChar(string(lexer->YYText())); yylval = new TokenAST(val, "CHAR"); return CH;}
+{unsign_float} {Val val = atof(lexer->YYText()); yylval = new TokenAST(val, "FLOAT"); return NUM;}
+{unsign_int} {Val val = atoi(lexer->YYText()); yylval = new TokenAST(val, "INT"); return NUM;}
+{id} {Val val = string(lexer->YYText()); lastId = new TokenAST(val); yylval = lastId; return ID;}
 {whitespace} {}
 . {fprintf(stderr, "[ERROR] unexpected token \'%s\'\n", yytext); }
 %%
+
+
 /*
 int main(int argc, char** argv)
 {
@@ -99,4 +108,40 @@ int yylex(void)
 int yyFlexLexer::yywrap()
 {
     return 1;
+}
+
+char parseChar(string str)
+{
+    string ch = str.substr(1, str.size()-2);
+    if(ch[0] == '\\') {
+        switch(ch[1]) {
+            case 'a': return '\a';
+            case 'b': return '\b';
+            case 'f': return '\f';
+            case 'n': return '\n';
+            case 'r': return '\r';
+            case 't': return '\t';
+            case 'v': return '\v';
+            case '\\': return '\\';
+            case '\'': return '\'';
+            case '\"': return '\"';
+            case '\?': return '\?';
+            case '0': return '\0';
+        }
+    }
+    return ch[0];
+}
+
+string parseStr(string str) {
+    // trim "
+    str = str.substr(1, str.size()-2);
+    // res str
+    string res;
+    // parse char if needed
+    for(int i = 0; i < str.size(); i++) {
+        if(str[i] == '\\')
+            res.push_back(parseChar("\'"+str.substr(i++, 2)+"\'"));
+        else res.push_back(str[i]);
+    }
+    return res;
 }
