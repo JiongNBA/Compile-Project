@@ -5,6 +5,7 @@
 #include<vector>
 #include<queue>
 #include<variant>
+#include<stack>
 #include<llvm/IR/Value.h>
 #include<llvm/IR/Type.h>
 #include<llvm/Support/Error.h>
@@ -103,6 +104,10 @@ public:
             if(origType == "FLOAT") return builder->CreateFPToUI(val, builder->getInt8Ty());
             else if(origType == "INT") return builder->CreateTrunc(val, builder->getInt8Ty());
         }
+        else if(retType == "BOOL") {
+            if(origType == "FLOAT") return builder->CreateFPToUI(val, builder->getInt1Ty());
+            else if(origType == "INT" || origType == "CHAR" ) return builder->CreateZExtOrTrunc(val, builder->getInt1Ty());
+        }
         return val;
     }
 
@@ -151,6 +156,7 @@ public:
             out << std::get<std::string>(AST->val);
         }
         out << "(dtype: " << AST->dtype << ")";
+        //out << "<" << typeid(*AST).name() << ">";
         return out;
     }
 
@@ -307,11 +313,30 @@ public:
             builder->CreateStore(iter, alloc);
         }
 
-        
+        builder->SetInsertPoint(entry); 
+        bool hasRet = false;
         for(int i = 0; i < this->child.size(); i++) {
-            builder->SetInsertPoint(entry); 
             this->child[i]->Codegen();
-            if(this->child[i]->ntype == RET) break;
+            if(this->child[i]->ntype == RET) {
+                hasRet = true;
+                break;
+            }
+        }
+        // default return
+        if(!hasRet) {
+            Type *type = this->getType();
+            if(this->dtype == "INT") {
+                builder->CreateRet(Constant::getIntegerValue(type, APInt(32, 0)));
+            }
+            else if(this->dtype == "FLOAT") {
+                builder->CreateRet(ConstantFP::get(type, 0.0));
+            }
+            else if(this->dtype == "CHAR") {
+                builder->CreateRet(Constant::getIntegerValue(type, APInt(8, 0)));
+            }
+            else if(this->dtype == "VOID") {
+                builder->CreateRetVoid();
+            }
         }
         return NULL;
     }
@@ -340,7 +365,7 @@ public:
         // parameters
         std::vector<Value *> args;
         for (int i = 0; i < this->child.size(); i++) {
-            std::cout << this->child[i] << std::endl; 
+            //std::cout << this->child[i] << std::endl; 
             args.push_back(this->child[i]->Codegen());
         }
 
@@ -451,6 +476,118 @@ public:
     }
 };
 
+class CondAST : public BaseAST
+{
+public:
+    CondAST() {}
+    CondAST(Val val, std::string type) {
+        this->setAST(val, type);
+    }
+    ~CondAST() {}
+    llvm::Value *Codegen() {
+/*
+        std::cout << "enter cond stmt" << std::endl;
+        // FIXME: 
+        Function *func = builder->GetInsertBlock()->getParent();
+        std::vector<BasicBlock *> blocks;
+        //BasicBlock *entry = builder->GetInsertBlock();
+        for(int i = 0; i < this->child.size(); i++) {
+            blocks.push_back(BasicBlock::Create(*context, ".then"));
+        }
+        BasicBlock *funcBack = BasicBlock::Create(*context, ".end");
+        for(int i = 0; i < this->child.size(); i++) { 
+            //builder->SetInsertPoint(entry);
+            // if-stmt & elif stmt: create br
+            if(i == 0 || i != this->child.size() - 1) {
+                Value *condExp = this->child[i]->child[0]->Codegen();
+                condExp = this->cast(condExp, this->child[i]->child[0]->dtype, "BOOL");
+
+                if(this->child.size() == 1) builder->CreateCondBr(condExp, blocks[i], funcBack);
+                else builder->CreateCondBr(condExp, blocks[i], blocks[i+1]);
+
+                std::cout << "create cond br successfully" << std::endl;
+            }
+            func->getBasicBlockList().push_back(blocks[i]);
+
+            // condition block's content
+            builder->SetInsertPoint(blocks[i]);
+            bool hasRet = false;
+            for(int j = 0; j < this->child[i]->child.size(); j++) {
+                if((this->child.size() == 1 || i != this->child.size() - 1) && j == 0) continue;
+                std::cout << j << std::endl;
+                this->child[i]->child[j]->Codegen();
+                if(this->child[i]->child[j]->ntype == RET) {
+                    hasRet = true;
+                    break;
+                }
+            }
+            if(!hasRet) builder->CreateBr(funcBack);
+        }
+        func->getBasicBlockList().push_back(funcBack);
+        builder->SetInsertPoint(funcBack);
+*/
+
+        Function *func = builder->GetInsertBlock()->getParent();
+        std::vector<BasicBlock *> blocks;
+        std::vector<BasicBlock *> elses;
+        for (int i = 0; i == 0 || i + 1 < this->child.size(); i++) {
+            blocks.push_back(BasicBlock::Create(*context, ".then"));
+            if(this->child.size() > 1) elses.push_back(BasicBlock::Create(*context, ".else"));
+        }
+        std::cout << "children num: " << this->child.size() << std::endl;
+        std::cout << "block size: " << blocks.size() << std::endl;
+        std::cout << "elses size: " << elses.size() << std::endl;
+        BasicBlock *merge = BasicBlock::Create(*context, ".merge");
+        for (int i = 0; i == 0 || i + 1 < this->child.size(); i++) {
+            /* if / elif */
+            std::cout << "123" << std::endl;
+            std::cout << this->child[i]->child[0] << std::endl;
+            Value *condExp = this->child[i]->child[0]->Codegen();
+            std::cout << "456" << std::endl;
+            condExp = this->cast(condExp, this->child[i]->child[0]->dtype, "BOOL");
+            std::cout << "789" << std::endl;
+            // br
+            if(this->child.size() == 1) builder->CreateCondBr(condExp, blocks[i], merge);
+            else builder->CreateCondBr(condExp, blocks[i], elses[i]);
+            std::cout << "000" << std::endl;
+            // add block
+            func->getBasicBlockList().push_back(blocks[i]);
+            // set insert block
+            builder->SetInsertPoint(blocks[i]);
+            bool hasRet = false;
+            for(int j = 1; j < this->child[i]->child.size(); j++) {
+                std::cout << "i = " << i << ", j = " << j << std::endl;
+                this->child[i]->child[j]->Codegen();
+                if(this->child[i]->child[j]->ntype == RET) {
+                    hasRet = true;
+                    break;
+                }
+            }
+            if(!hasRet) builder->CreateBr(merge);
+            /* else of elif-stmt & else*/
+            if(!elses.empty()) {
+                func->getBasicBlockList().push_back(elses[i]);
+                builder->SetInsertPoint(elses[i]);
+                // else
+                if(i + 1 == elses.size()) {
+                    bool hasRet = false;
+                    for(int j = 0; j < this->child.back()->child.size(); j++) {
+                        this->child.back()->child[j]->Codegen();
+                        if(this->child.back()->child[j]->ntype == RET) {
+                            hasRet = true;
+                            break;
+                        }
+                    }
+                    if(!hasRet) builder->CreateBr(merge);
+                }
+            }
+        }
+        func->getBasicBlockList().push_back(merge);
+        builder->SetInsertPoint(merge);
+
+        return NULL;
+    }
+};
 
 class IfAST : public BaseAST
 {
@@ -460,6 +597,21 @@ public:
         this->setAST(val, type);
     }
     ~IfAST() {}
+    llvm::Value *Codegen() {
+        //Function *func = builder->GetInsertBlock()->getParent();
+
+        return NULL;
+    }
+};
+
+class ElseAST : public BaseAST
+{
+public:
+    ElseAST() {}
+    ElseAST(Val val, std::string type) {
+        this->setAST(val, type);
+    }
+    ~ElseAST() {}
     llvm::Value *Codegen() {
         return NULL;
     }
@@ -523,7 +675,7 @@ public:
             ValueSymbolTable *table = builder->GetInsertBlock()->getValueSymbolTable();
             return builder->CreateLoad(table->lookup(strId));
         }
-        else  if(this->ntype ==G_VAR) {
+        else  if(this->ntype == G_VAR) {
             std::string strId = std::get<std::string>(this->val);
             return builder->CreateLoad(Global_Values[strId]);
 
@@ -649,8 +801,10 @@ class BinaryOpAST : public BaseAST{
     }
     ~BinaryOpAST() {}
     llvm::Value *Codegen() {
+        std::cout << "!!!" <<std::endl;
         Value *val_left = this->child[0]->Codegen();
         Value *val_right = this->child[1]->Codegen();
+        std::cout << "!!!" <<std::endl;
         Value *val_res;
         
         if(this->dtype == "FLOAT") {
@@ -826,7 +980,7 @@ public:
         }
         return alloc;*/
         Value *v;
-        if(this->ntype ==L_VAR){
+        if(this->ntype == L_VAR){
             v = table->lookup(strId);
         }
         else {
@@ -843,6 +997,99 @@ public:
         }
         return NULL;
     }
+};
+
+extern std::stack<BasicBlock *> loop_start;
+extern std::stack<BasicBlock *> loop_end;
+
+class LoopAST : public BaseAST{
+public:
+    LoopAST(){}
+    LoopAST(Val val, std::string type) {
+        this->setAST(val, type);
+    }
+    ~LoopAST(){}
+    llvm::Value *Codegen() {
+        if(this->dtype =="while") {
+            llvm::BasicBlock * BBori = builder->GetInsertBlock();
+            llvm::Function   * func = BBori->getParent();
+            llvm::BasicBlock * BBwhileStart =BasicBlock::Create(*context, "whileStart", func);
+            llvm::BasicBlock * BBwhileBody  =BasicBlock::Create(*context, "whileBody" , func);
+            llvm::BasicBlock * BBwhileEnd   =BasicBlock::Create(*context, "whileEnd"  , func);
+            
+            loop_end.push(BBwhileEnd);
+            loop_start.push(BBwhileStart);
+
+            builder->CreateBr(BBwhileStart); 
+
+            builder->SetInsertPoint(BBwhileStart);
+            Value * cond = this->child[0]->Codegen();
+            builder->CreateCondBr(cond, BBwhileBody, BBwhileEnd);
+        
+            builder->SetInsertPoint(BBwhileBody);
+            for(int i = 1; i < this->child.size(); i++) {
+                this->child[i]->Codegen();
+            }
+            if(!builder->GetInsertBlock()->getTerminator())
+                builder->CreateBr(BBwhileStart);
+
+            builder->CreateBr(BBwhileStart);
+            builder->SetInsertPoint(BBwhileEnd); 
+            loop_end.pop();
+            loop_start.pop();
+        }
+        else if(this->dtype == "for") {
+            llvm::Function * func = builder->GetInsertBlock()->getParent();
+            llvm::BasicBlock * BBForCond  = BasicBlock::Create(*context, "BBForCond", func);
+            llvm::BasicBlock * BBForStart = BasicBlock::Create(*context, "BBForStart", func);
+            llvm::BasicBlock * BBForBody  = BasicBlock::Create(*context, "BBForBody", func);
+            llvm::BasicBlock * BBForEnd   = BasicBlock::Create(*context, "BBForEnd", func);
+            
+            loop_end.push(BBForEnd);
+            loop_start.push(BBForStart);
+            // step 1
+            this->child[0]->Codegen();
+            builder->CreateBr(BBForCond);
+            
+            // step 2
+            builder->SetInsertPoint(BBForCond);
+            llvm::Value * cond = this->child[1]->Codegen();
+            builder->CreateCondBr(cond, BBForBody, BBForEnd);
+            
+            // step 3
+            builder->SetInsertPoint(BBForBody);
+            for(int i = 3;i<this->child.size();++i) {
+                this->child[i]->Codegen();
+            }
+            if(!builder->GetInsertBlock()->getTerminator())
+                builder->CreateBr(BBForStart);
+            
+            // step 4
+            builder->SetInsertPoint(BBForStart);
+            this->child[2]->Codegen();
+            builder->CreateBr(BBForCond);
+            builder->SetInsertPoint(BBForEnd);
+            loop_start.pop();
+            loop_end.pop();
+        }
+		return nullptr;
+        
+    }
+
+};
+class BrAST : public BaseAST{
+public:
+    BrAST(){}
+    BrAST(Val val, std::string type) {
+        this->setAST(val, type);
+    }
+    ~BrAST(){}
+    llvm::Value *Codegen() {
+        if(this->dtype == "continue") builder->CreateBr(loop_start.top());
+        else  builder->CreateBr(loop_end.top());
+        return NULL;
+    }
+
 };
 
 

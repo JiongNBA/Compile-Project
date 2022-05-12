@@ -56,11 +56,15 @@ public:
             // update addrs
             addrs[0] += size;
             // push into parent stack
+            std::cout << "parent: " << std::endl;
+            for(int i = 0; i < parent.size(); i++) {
+                std::cout << parent[i] << std::endl;
+            }
             parent.push_back(fa);
         }
         // TODO: error recovery
         else {
-            
+
         } 
         
         addrs[1] = 0;
@@ -145,12 +149,33 @@ public:
 };
 
 
-class IfStmt
+class CondStmt
 {
 public:
+    static BaseAST *condStmt() {
+        Val val = "cond";
+        BaseAST *ca = new CondAST(val, "VOID");
+        return ca; 
+    }
+
     static BaseAST *ifStmt(BaseAST *exp) {
         Val val = "if";
-        BaseAST *ia = new IfAST(val, "INT");
+        BaseAST *ia = new IfAST(val, "VOID");
+        ia->addChild(exp);
+        return ia;
+    }
+
+    static BaseAST *elifStmt(BaseAST *exp) {
+        Val val = "elif";
+        BaseAST *ea = new IfAST(val, "VOID");
+        ea->addChild(exp);
+        return ea;
+    }
+
+    static BaseAST *elseStmt() {
+        Val val = "else";
+        BaseAST *ea = new ElseAST(val, "VOID");
+        return ea;
     }
 };
 
@@ -243,17 +268,17 @@ public:
         // check symbol table to get type
         std::string strId = std::get<std::string>(val);
         std::string type;
-        int level;
+        int idLevel;
         if(symTable.isFind(strId)) {
             type = symTable.table[strId].top().type;
-            level = symTable.table[strId].top().level;
+            idLevel = symTable.table[strId].top().level;
         }
         // error recovery
         else {
             prtErr("undeclared identifer \'"+strId+"\'!");
             type = "INT";
         }
-        if(level>0) return  new ExpAST(val, type, L_VAR);
+        if(idLevel>0) return  new ExpAST(val, type, L_VAR);
         else        return  new ExpAST(val, type, G_VAR);
 
         return NULL;
@@ -296,6 +321,7 @@ public:
         else if(node_left->dtype=="INT"||node_right->dtype=="INT") res_type = "INT";
         else res_type = "CHAR";
         BaseAST *ea = new BinaryOpAST("binary", res_type, ntype);
+
         ea->child.push_back(node_left);
         ea->child.push_back(node_right);
         return ea;
@@ -341,6 +367,37 @@ public:
             ea = new AddrAST(val,type, G_VAR);
         return ea;
     }
+};
+class Br{
+public:
+    static BaseAST *Brstmt(std::string type) {
+        BaseAST *ra = new BrAST("br",type);
+        parent[level-1]->addChild(ra);
+        return ra;
+    }
+};
+
+class Loop{
+public: 
+    static BaseAST *While_loop(BaseAST *exp) {
+        BaseAST *ra = new LoopAST("loop", "while");
+        parent[level-1]->addChild(ra);
+        parent.push_back(ra);
+        ra->addChild(exp);
+        addrs[level] = 0;
+        return ra;
+    }
+    static BaseAST *For_loop(BaseAST *exp1,BaseAST *exp2,BaseAST *exp3) {
+        BaseAST *ra = new LoopAST("for","for");
+        parent[level-1]->addChild(ra);
+        parent.push_back(ra);
+        ra->addChild(exp1);
+        ra->addChild(exp2);
+        ra->addChild(exp3);
+        addrs[level] = 0;
+        return ra;
+    }
+
 };
 
 #endif

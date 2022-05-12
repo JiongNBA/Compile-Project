@@ -13,6 +13,7 @@ extern FlexLexer *lexer;
 using namespace std;
 
 BaseAST *lastId;
+BaseAST *curAST;
 
 char parseChar(string str);
 string parseStr(string str);
@@ -63,11 +64,11 @@ int {return INT;}
 float {return FLOAT;}
 char {return CHAR;}
 void {return VOID;}
-{literal} {Val val = parseStr(string(lexer->YYText())); yylval = new TokenAST(val, "LITERAL"); return LITERAL;}
-{char} {Val val = parseChar(string(lexer->YYText())); yylval = new TokenAST(val, "CHAR"); return CH;}
-{unsign_float} {Val val = atof(lexer->YYText()); yylval = new TokenAST(val, "FLOAT"); return NUM;}
-{unsign_int} {Val val = atoi(lexer->YYText()); yylval = new TokenAST(val, "INT"); return NUM;}
-{id} {Val val = string(lexer->YYText()); lastId = new TokenAST(val); yylval = lastId; return ID;}
+{literal} {Val val = parseStr(string(lexer->YYText())); curAST = new TokenAST(val, "LITERAL"); return LITERAL;}
+{char} {Val val = parseChar(string(lexer->YYText())); curAST = new TokenAST(val, "CHAR"); return CH;}
+{unsign_float} {Val val = atof(lexer->YYText()); curAST = new TokenAST(val, "FLOAT"); return NUM;}
+{unsign_int} {Val val = atoi(lexer->YYText()); curAST = new TokenAST(val, "INT"); return NUM;}
+{id} {Val val = string(lexer->YYText()); lastId = new TokenAST(val); curAST = lastId; return ID;}
 {whitespace} {}
 . {fprintf(stderr, "[ERROR] unexpected token \'%s\'\n", yytext); }
 %%

@@ -51,7 +51,8 @@ int main(int argc, char** argv)
     ifstream* srcCode = new ifstream();
     srcCode->open(argv[1], ios::in);
     if(srcCode->fail()) {
-        fprintf(stderr, "this file doesn't exist or cannot be accessed!!!\n");
+        cerr << "the file: \'" << argv[1];
+        fprintf(stderr, "\' doesn't exist or cannot be accessed!!!\n");
         return 1;
     }
     // set source file name
