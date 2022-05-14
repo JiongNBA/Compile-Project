@@ -16,6 +16,15 @@ YACC=bison
 # 	./flySCC ../test/test2.c > ../test/test2-GA
 # GAtest3: flySCC
 # 	./flySCC ../test/test3.c > ../test/test3-GA
+SAtest0: flySCC
+	./flySCC ../test/test0.c 
+# SAtest1: flySCC
+# 	./flySCC ../test/test1.c
+# SAtest2: flySCC
+# 	./flySCC ../test/test2.c
+# SAtest3: flySCC
+# 	./flySCC ../test/test3.c
+
 
 debug: flySCC
 	gdb ./flySCC
@@ -23,16 +32,16 @@ debug: flySCC
 IR:
 	clang -emit-llvm ../test/test0.c -S -o  ../test/test0-clang.ll
 
-SAtest0: flySCC
-	./flySCC ../test/test0.c 
-SAtest1: flySCC
-	./flySCC ../test/test1.c
-SAtest2: flySCC
-	./flySCC ../test/test2.c
-SAtest3: flySCC
-	./flySCC ../test/test3.c
+run1: flySCC
+	./flySCC ../test/test1.fly
+run2: flySCC
+	./flySCC ../test/test2.fly
+run3: flySCC
+	./flySCC ../test/test3.fly
+
+
 flySCC: flySCC.cpp lexer.yy.cc parser.tab.cpp
-	$(CC) `llvm-config --cxxflags` -std=c++17 -g lexer.yy.cc parser.tab.cpp flySCC.cpp -DLLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING=1 -o $@ `llvm-config --ldflags --system-libs --libs` -lfl
+	$(CC) `llvm-config --cxxflags` -std=c++17 -g lexer.yy.cc parser.tab.cpp flySCC.cpp -DLLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING=1 -o $@ `llvm-config --ldflags --system-libs --libs all` -lfl
 lexer.yy.cc: lexer.l parser.tab.cpp
 	$(FLEX) -o lexer.yy.cc lexer.l
 parser.tab.cpp: parser.ypp
