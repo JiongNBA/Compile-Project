@@ -6,6 +6,8 @@
 #include<queue>
 #include<variant>
 #include<stack>
+#include <iostream>
+#include <fstream>
 #include<llvm/IR/Value.h>
 #include<llvm/IR/Type.h>
 #include<llvm/Support/Error.h>
@@ -21,6 +23,7 @@
 #include<llvm/Support/Casting.h>
 #include"../include/IO.h"
 
+
 using namespace llvm;
 
 typedef std::variant<int, double, char, std::string> Val;
@@ -30,6 +33,7 @@ extern std::unique_ptr<Module> mod;
 extern std::unique_ptr<IRBuilder<> > builder;
 extern Function *fly;
 extern std::map<std::string, GlobalVariable*> Global_Values;
+extern std::ofstream ofresult;
 /*
 llvm::Value *ErrorVal(const char *str)
 { 
@@ -102,18 +106,25 @@ public:
         }
         else if(retType == "CHAR") {
             if(origType == "FLOAT") return builder->CreateFPToUI(val, builder->getInt8Ty());
-            else if(origType == "INT") return builder->CreateTrunc(val, builder->getInt8Ty());
+            else if(origType == "INT") return builder->CreateZExtOrTrunc(val, builder->getInt8Ty());
         }
         else if(retType == "BOOL") {
             if(origType == "FLOAT") return builder->CreateFPToUI(val, builder->getInt1Ty());
-            else if(origType == "INT" || origType == "CHAR" ) return builder->CreateZExtOrTrunc(val, builder->getInt1Ty());
+            else if(origType == "INT") {
+                Value *l = ConstantInt::get(builder->getInt32Ty(), 0);
+                return val = builder->CreateICmpNE(l, val, ".cmpneqi");
+            }
+            else if(origType == "CHAR" ) {
+                Value *l = ConstantInt::get(builder->getInt8Ty(), 0);
+                return val = builder->CreateICmpNE(l, val, ".cmpneqc");
+            }
         }
         return val;
     }
 
     Type *getType() {
         Type *type;
-        if(this->isArray) {
+        if(this->isArray && this->ntype == PAR) {
             if(this->dtype == "INT") {
                 type = PointerType::getInt32PtrTy(*context);
             }
@@ -174,6 +185,57 @@ public:
               nodeQueue.push(node->child[i]);
             }
         }
+    }
+
+    std::string restoreChar(char ch) {
+        switch(ch) {
+            case '\a': return "\\a";
+            case '\b': return "\\b";
+            case '\f': return "\\f";
+            case '\n': return "\\n";
+            case '\r': return "\\r";
+            case '\t': return "\\t";
+            case '\v': return "\\v";
+            case '\\': return "\\\\";
+            case '\'': return "\\\'";
+            case '\"': return "\\\"";
+            case '\?': return "\\?";
+            case '\0': return "0";
+        }
+        std::string ret;
+        ret.push_back(ch);
+        return ret;
+    }
+
+    std::string restoreStr(std::string str) {
+        std::string ret;
+        for(int i = 0; i < str.size(); i++) {
+            ret += restoreChar(str[i]);
+        }
+        return ret;
+    }
+
+    void visual() {
+        if(std::get_if<int>(&(this->val)) != nullptr) {
+            ofresult << "{\"name\": \"" << std::get<int>(this->val) << "|" << this->dtype << "\"," << std::endl;
+        }
+        else if(std::get_if<double>(&(this->val)) != nullptr) {
+            ofresult << "{\"name\": \"" << std::get<double>(this->val) << "|" << this->dtype  << "\"," << std::endl;
+        }
+        else if(std::get_if<char>(&(this->val)) != nullptr) {
+            ofresult << "{\"name\": \"" << restoreChar(std::get<char>(this->val)) << "|" << this->dtype  << "\"," << std::endl;
+        }
+        else if(std::get_if<std::string>(&(this->val)) != nullptr) {
+            ofresult << "{\"name\": \"" << restoreStr(std::get<std::string>(this->val)) << "|" << this->dtype  << "\"," << std::endl;
+        }
+        ofresult << "\"children\":[" << std::endl;
+        for(int i=0; i<this->child.size(); i++ ) {
+            if( i!=0 ) {
+                ofresult << "," << std::endl;
+            }
+            child[i]->visual();
+        }
+        ofresult << "]}" << std::endl;
     }
 
 };
@@ -314,16 +376,16 @@ public:
         }
 
         builder->SetInsertPoint(entry); 
-        bool hasRet = false;
+        //bool hasRet = false;
         for(int i = 0; i < this->child.size(); i++) {
             this->child[i]->Codegen();
             if(this->child[i]->ntype == RET) {
-                hasRet = true;
+                //hasRet = true;
                 break;
             }
         }
         // default return
-        if(!hasRet) {
+        if(!builder->GetInsertBlock()->getTerminator()) {
             Type *type = this->getType();
             if(this->dtype == "INT") {
                 builder->CreateRet(Constant::getIntegerValue(type, APInt(32, 0)));
@@ -412,12 +474,12 @@ class DefAST : public BaseAST
 public:
     int level;
     DefAST() {}
-    DefAST(std::string type, Val val, bool isArray, int level) {
-        this->setAST(val, type, isArray);
+    DefAST(std::string type, Val val, int level) {
+        this->setAST(val, type);
         this->level = level;
     }
-    DefAST(std::string type, Val val, bool isArray, BaseAST *exp, int level) {
-        this->setAST(val, type, isArray);
+    DefAST(std::string type, Val val, BaseAST *exp, int level) {
+        this->setAST(val, type);
         this->level = level;
         this->child.push_back(exp);
     }
@@ -554,31 +616,35 @@ public:
             func->getBasicBlockList().push_back(blocks[i]);
             // set insert block
             builder->SetInsertPoint(blocks[i]);
-            bool hasRet = false;
+            //bool hasRet = false;
             for(int j = 1; j < this->child[i]->child.size(); j++) {
                 std::cout << "i = " << i << ", j = " << j << std::endl;
                 this->child[i]->child[j]->Codegen();
-                if(this->child[i]->child[j]->ntype == RET) {
-                    hasRet = true;
+                if(this->child[i]->child[j]->ntype == RET || 
+                   this->child[i]->child[j]->dtype == "break" ||
+                   this->child[i]->child[j]->dtype == "continue") {
+                    //hasRet = true;
                     break;
                 }
             }
-            if(!hasRet) builder->CreateBr(merge);
+            if(!builder->GetInsertBlock()->getTerminator()) builder->CreateBr(merge);
             /* else of elif-stmt & else*/
             if(!elses.empty()) {
                 func->getBasicBlockList().push_back(elses[i]);
                 builder->SetInsertPoint(elses[i]);
                 // else
                 if(i + 1 == elses.size()) {
-                    bool hasRet = false;
+                    //bool hasRet = false;
                     for(int j = 0; j < this->child.back()->child.size(); j++) {
                         this->child.back()->child[j]->Codegen();
-                        if(this->child.back()->child[j]->ntype == RET) {
-                            hasRet = true;
+                        if(this->child.back()->child[j]->ntype == RET || 
+                           this->child.back()->child[j]->dtype == "break" ||
+                           this->child.back()->child[j]->dtype == "continue") {
+                            //hasRet = true;
                             break;
                         }
                     }
-                    if(!hasRet) builder->CreateBr(merge);
+                    if(!builder->GetInsertBlock()->getTerminator()) builder->CreateBr(merge);
                 }
             }
         }
@@ -829,7 +895,7 @@ class BinaryOpAST : public BaseAST{
             else if(this->dtype == "INT") return builder->CreateAdd(val_left, val_right, "addtmp");
             else {
                 val_res = builder->CreateAdd(val_left, val_right, "addtmp");
-                return builder->CreateTrunc(val_res,Type::getInt8Ty(*context));
+                return builder->CreateZExtOrTrunc(val_res,Type::getInt8Ty(*context));
             }
         }
         else if(ntype == B_SUB) {
@@ -837,7 +903,7 @@ class BinaryOpAST : public BaseAST{
             else if(this->dtype == "INT") return builder->CreateSub(val_left, val_right, "subtmp");
             else {
                 val_res = builder->CreateSub(val_left, val_right, "subtmp");
-                return builder->CreateTrunc(val_res,Type::getInt8Ty(*context));
+                return builder->CreateZExtOrTrunc(val_res,Type::getInt8Ty(*context));
             }
         }
         else if(ntype == B_GR) {
@@ -920,28 +986,28 @@ class BinaryOpAST : public BaseAST{
             }
         }
         else if(ntype == B_AND) {
-            val_left = builder->CreateFPToSI(val_left,  Type::getInt32Ty(*context));
-            val_right= builder->CreateFPToSI(val_right, Type::getInt32Ty(*context));
+            val_left = this->cast(val_left, this->child[0]->dtype, "INT");
+            val_right = this->cast(val_right, this->child[1]->dtype, "INT");
             val_res = builder ->CreateAnd(val_left,val_right);
             Value *l = ConstantInt::get(Type::getInt32Ty(*context), 0);
             val_res = builder->CreateICmpNE(l, val_res, "cmpneqi");
             if(this->dtype == "FLOAT") return builder->CreateUIToFP(val_res, Type::getDoubleTy(*context));
             else {
                 Value *val = builder->CreateZExt(val_res, Type::getInt32Ty(*context));
-                if(this->dtype == "CHAR") val = builder->CreateTrunc(val_res, Type::getInt8Ty(*context)); 
+                if(this->dtype == "CHAR") val = builder->CreateZExtOrTrunc(val_res, Type::getInt8Ty(*context)); 
                 return val;
             }
         }
         else if(ntype == B_OR) {
-            val_left = builder->CreateFPToSI(val_left,  Type::getInt32Ty(*context));
-            val_right= builder->CreateFPToSI(val_right, Type::getInt32Ty(*context));
+            val_left = this->cast(val_left, this->child[0]->dtype, "INT");
+            val_right = this->cast(val_right, this->child[1]->dtype, "INT");
             val_res = builder ->CreateOr(val_left,val_right);
             Value *l = ConstantInt::get(Type::getInt32Ty(*context), 0);
             val_res = builder->CreateICmpNE(l, val_res, "cmpneqi");
             if(this->dtype == "FLOAT") return builder->CreateUIToFP(val_res, Type::getDoubleTy(*context));
             else {
                 Value *val = builder->CreateZExt(val_res, Type::getInt32Ty(*context));
-                if(this->dtype == "CHAR") val = builder->CreateTrunc(val_res, Type::getInt8Ty(*context)); 
+                if(this->dtype == "CHAR") val = builder->CreateZExtOrTrunc(val_res, Type::getInt8Ty(*context)); 
                 return val;
             }
         }
@@ -1024,6 +1090,7 @@ public:
 
             builder->SetInsertPoint(BBwhileStart);
             Value * cond = this->child[0]->Codegen();
+            cond = this->cast(cond, this->child[0]->dtype, "BOOL");
             builder->CreateCondBr(cond, BBwhileBody, BBwhileEnd);
         
             builder->SetInsertPoint(BBwhileBody);
@@ -1033,7 +1100,7 @@ public:
             if(!builder->GetInsertBlock()->getTerminator())
                 builder->CreateBr(BBwhileStart);
 
-            builder->CreateBr(BBwhileStart);
+            //builder->CreateBr(BBwhileStart);
             builder->SetInsertPoint(BBwhileEnd); 
             loop_end.pop();
             loop_start.pop();
@@ -1047,16 +1114,15 @@ public:
             
             loop_end.push(BBForEnd);
             loop_start.push(BBForStart);
-            // step 1
+            
             this->child[0]->Codegen();
             builder->CreateBr(BBForCond);
-            
-            // step 2
+                   
             builder->SetInsertPoint(BBForCond);
-            llvm::Value * cond = this->child[1]->Codegen();
+            Value *cond = this->child[1]->Codegen();
+            cond = this->cast(cond, this->child[1]->dtype, "BOOL");
             builder->CreateCondBr(cond, BBForBody, BBForEnd);
-            
-            // step 3
+               
             builder->SetInsertPoint(BBForBody);
             for(int i = 3;i<this->child.size();++i) {
                 this->child[i]->Codegen();
@@ -1064,14 +1130,15 @@ public:
             if(!builder->GetInsertBlock()->getTerminator())
                 builder->CreateBr(BBForStart);
             
-            // step 4
             builder->SetInsertPoint(BBForStart);
             this->child[2]->Codegen();
             builder->CreateBr(BBForCond);
+
             builder->SetInsertPoint(BBForEnd);
             loop_start.pop();
             loop_end.pop();
         }
+
 		return nullptr;
         
     }
@@ -1090,6 +1157,89 @@ public:
         return NULL;
     }
 
+};
+
+class arrAST : public BaseAST
+{
+public:
+    bool isDef; // true: def; false: load / store
+    bool isAssign; // true: store; false: load
+    int arrLevel;
+    std::string id;
+    int dim;
+
+    arrAST() {}
+    arrAST(Val val, std::string type, int arrLevel) {
+        this->setAST(val, type, true);
+        this->arrLevel = arrLevel;
+    }
+    ~arrAST() {}
+
+    llvm::Value *dec() {
+        Type *type = this->getType();
+        // traverse the array tree
+        BaseAST *node = this;
+        while(!node->child.empty()) {
+            int size = std::get<int>(node->child[0]->val);
+            type = ArrayType::get(type, size);
+            node = node->child[1];
+        }
+        // local array
+        if(arrLevel > 0) {
+            std::cout << "id: " << this->id << std::endl;
+            return builder->CreateAlloca(type, nullptr, this->id);
+        }
+        // global array
+        else {
+            Constant *initializer = ConstantAggregateZero::get(type);
+            GlobalVariable *arr = new GlobalVariable(*mod, type, false, 
+                                                     llvm::GlobalVariable::CommonLinkage, 
+                                                     initializer, this->id);
+            // add into global symbol table
+            Global_Values[this->id] = arr;
+            return arr;
+        }
+    }
+
+    llvm::Value *ref(bool isAssign) {
+        Value *lVal;
+        if(this->arrLevel > 0) {
+            ValueSymbolTable *table = builder->GetInsertBlock()->getValueSymbolTable();
+            lVal = table->lookup(this->id);
+        }
+        else lVal = Global_Values[this->id];
+        
+        // traverse the reference tree
+        std::vector<Value *> offsets;
+        BaseAST *node = this;
+        while(!node->child.empty()) {
+            Value *offset = node->child[0]->Codegen();
+            offsets.push_back(offset);
+            node = node->child[1];
+        }
+        
+        int cnt = offsets.size();
+        while(cnt--) {
+            lVal = builder->CreateGEP(lVal, {builder->getInt32(0), offsets[cnt]});
+        }
+
+        if(isAssign) {
+            Value *val = this->child.back()->Codegen();
+            val = this->cast(val, this->child.back()->dtype, this->dtype);
+            builder->CreateStore(val, lVal);
+            return val;
+        }
+        else return builder->CreateLoad(lVal);
+    }
+
+    llvm::Value *assign() {
+        return NULL;
+    }
+
+    llvm::Value *Codegen() {
+        if(this->isDef) return dec();
+        else return ref(this->isAssign);
+    }
 };
 
 
