@@ -25,6 +25,14 @@ using namespace llvm;
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/Support/ManagedStatic.h>
 #else
+#include <llvm/Support/Host.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/IR/LegacyPassManager.h>
 
 #endif
 
@@ -39,6 +47,7 @@ Function *fly;
 extern vector<int> addrs;
 extern SymTable symTable;
 
+ofstream ofresult("../visual/result.json",ios::trunc);
 
 int main(int argc, char** argv)
 {
@@ -67,8 +76,11 @@ int main(int argc, char** argv)
     addrs.push_back(0); 
     // grammar & semantic analysis
     yyparse();
-
-    root->prtTree();    
+    
+    cout << "here" << endl;
+    //root->prtTree();    
+    root->visual();
+    
     symTable.prtTable();
 
     // free obj    
@@ -88,10 +100,10 @@ int main(int argc, char** argv)
     cout << "generate IR file..." << endl;
 
     // set IR file name with profix '.ll'
-    string IRFileName = string(argv[1]);
-    int dotPos = IRFileName.find_last_of('.');
-    IRFileName.erase(dotPos+1, IRFileName.size()-dotPos-1);
-    IRFileName += "ll";
+    string fileName = string(argv[1]);
+    int dotPos = fileName.find_last_of('.');
+    fileName.erase(dotPos+1, fileName.size()-dotPos-1);
+    string IRFileName = fileName + "ll";
     std::error_code EC;
     raw_fd_ostream IRFile(IRFileName, EC);
     // output IR file
@@ -109,8 +121,50 @@ int main(int argc, char** argv)
     llvm_shutdown();
     //pause();
 #else
-    // use clang to compile IR and get machine code
+    // compile IR and get machine code
+    InitializeAllTargetInfos();
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+    InitializeAllAsmParsers();
+    InitializeAllAsmPrinters();
 
+    std::string err;
+    auto target = TargetRegistry::lookupTarget(sys::getDefaultTargetTriple(), err);
+
+  // Print an error and exit if we couldn't find the requested target.
+  if (!target) {
+    errs() << err;
+    return 1;
+  }
+
+  auto CPU = "generic";
+  auto Features = "";
+
+  TargetOptions opt;
+  auto RM = Optional<Reloc::Model>();
+  auto TheTargetMachine =
+       target->createTargetMachine(sys::getDefaultTargetTriple(), CPU, Features, opt, RM);
+
+  mod->setDataLayout(TheTargetMachine->createDataLayout());
+
+  auto binFileName = fileName + "o";
+  raw_fd_ostream dest(binFileName, EC, sys::fs::F_None);
+
+  if (EC) {
+    errs() << "Could not open file: " << EC.message();
+    return 1;
+  }
+
+  legacy::PassManager pass;
+  auto FileType = CGFT_ObjectFile;
+
+  if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
+    errs() << "TheTargetMachine can't emit a file of this type";
+    return 1;
+  }
+pass.run(*mod);
+  dest.flush();
+  outs() << "writes " << binFileName << "\n";
 
 #endif
     return 0;
