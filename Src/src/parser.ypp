@@ -124,10 +124,10 @@ elif-list: elif-list ELSE IF LEFT_PAR exp RIGHT_PAR { BaseAST *elifstmt = CondSt
          | {}
          ;
 
-for-stmt: FOR LEFT_PAR op-stmt SEMICOLON exp SEMICOLON op-stmt {$$ = Loop::For_loop($3,$5,$7); level++;}RIGHT_PAR block RIGHT_CURLY {symTable.delTable(level); level--;parent.pop_back();}
+for-stmt: FOR {$$ = Loop::For_loop(); level++;} LEFT_PAR op-stmt SEMICOLON exp { parent[level-1]->child.push_back($6); } SEMICOLON op-stmt RIGHT_PAR block RIGHT_CURLY {symTable.delTable(level); level--;parent.pop_back();}
         ;
 
-while-stmt: WHILE LEFT_PAR exp {$$ = Loop::While_loop($3); level++;}RIGHT_PAR block RIGHT_CURLY {symTable.delTable(level); level--;parent.pop_back();}
+while-stmt: WHILE LEFT_PAR exp {$$ = Loop::While_loop($3); level++;} RIGHT_PAR block RIGHT_CURLY {symTable.delTable(level); level--;parent.pop_back();}
           ;
           
 exp-list: exp-list COMMA exp { parent[level-1]->child.push_back($3); }
@@ -138,15 +138,15 @@ def-stmt: type def-stmt2 {$$ = $2;}
 def-stmt2: def-stmt2 COMMA def-stmt3 {$$ = $3;}
          | def-stmt3 { $$ = $1; }
          ;
-def-stmt3: ID {ids.push(curAST);} ASSIGN exp { BaseAST *id = ids.top(); $$ = DefStmt::def(curType, id->val, false, $4, level); ids.pop(); delete id; }
-         | ID subsript-list {}
-         | ID { $$ = DefStmt::def(curType, curAST->val, false, level); delete curAST;}
+def-stmt3: ID ASSIGN {ids.push(curAST);} exp { BaseAST *id = ids.top(); $$ = DefStmt::def(curType, id->val, $4, level); ids.pop(); delete id; }
+         | ID subsript-list { DefStmt::arrDef($2, curType); $$ = $2; }
+         | ID { $$ = DefStmt::def(curType, curAST->val, level); delete curAST;}
          | ID subsript-list ASSIGN LEFT_CURLY varlist RIGHT_CURLY {}
          ;
-subsript-list: subsript-list subsript {}
-             | subsript {}
+subsript-list: subsript-list subsript { $2->addChild($1); $$ = $2; Arr::setSucArr($2, $1); }
+             | { ids.push(curAST); } subsript { $2->addChild(ids.top()); $$ = $2; Arr::setFstArr($2, ids.top()->val); ids.pop(); }
              ;
-subsript: LEFT_SQUARE exp RIGHT_SQUARE {}
+subsript: LEFT_SQUARE exp RIGHT_SQUARE { $$ = Arr::arr($2, level); }
         ;
 ret-stmt: RETURN exp { $$ = RetStmt::ret($2);}
         ;
@@ -179,7 +179,7 @@ varlist: varlist COMMA exp { ids.top()->child.push_back($3); }
 // || 
 
 exp: ID ASSIGN {BaseAST *assign = Exp::assign_exp(curAST); ids.push(assign); } exp {BaseAST *assign = ids.top(); assign->child.push_back($4); $$ = assign; ids.pop(); }
-   | ID subsript-list ASSIGN {} exp {}
+   | ID subsript-list ASSIGN exp { Exp::arr_exp($2, true); $2->addChild($4); $$ = $2; }
    | exp0 { $$ = $1; }
    ;
 exp0: exp0 OR exp1 {$$ = Exp::binary_exp($1,$3,B_OR);}
@@ -220,7 +220,7 @@ exp6: SUB exp6 { $$ = Exp::sub_exp($2); }
 exp7: LEFT_PAR exp RIGHT_PAR { $$ = $2; }
     | NUM { $$ = Exp::exp(curAST->val, curAST->dtype); delete curAST; }
     | ID LEFT_PAR { BaseAST *fa = FuncCall::funcCall(lastId->val); ids.push(fa);} funvarlist{$$ = $4;}
-    | ID subsript-list {}
+    | ID subsript-list { Exp::arr_exp($2, false); $$ = $2; }
     | ID { $$ = Exp::exp(curAST->val); delete curAST;}
     | LITERAL { $$ = Exp::exp(curAST->val, curAST->dtype); delete curAST; }
     | CH { $$ = Exp::exp(curAST->val, curAST->dtype); delete curAST; }
