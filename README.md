@@ -5,20 +5,6 @@ This project is for ZJU 2022 Spring-Summer Compilation Principle course, contrib
 This is a simple compiler for the FLY language -- a tiny subset of C. It can run on different operating systems, including Linux, MacOS.
 
 ## test os
-+--------------------+
-
-|os   |       version|
-
-+--------------------+
-
-|Linux|              |
-
-+--------------------+
-
-|MacOS|Monterey12.3.1|
-
-+--------------------+
-
 | os| version |
 | --- | --- |
 | Linux |  |
