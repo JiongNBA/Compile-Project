@@ -101,13 +101,13 @@ public:
 class DefStmt
 {
 public:
-    static BaseAST *def(std::string type, Val id, bool isArray, int level) {
-        BaseAST *da = new DefAST(type, id, isArray, level);
+    static BaseAST *def(std::string type, Val id, int level) {
+        BaseAST *da = new DefAST(type, id, level);
         std::string strId = std::get<std::string>(id);
         if(symTable.checkId(strId, level)) {
             int size = getSize(type);
             // add entry
-            Entry entry(strId, isArray? ARR: VAR, type, 
+            Entry entry(strId, VAR, type, 
                         addrs[level], level, lexer->lineno(), size);
             symTable.insert(strId, entry);
             // update addrs
@@ -124,13 +124,13 @@ public:
         return da;
     }
 
-    static BaseAST *def(std::string type, Val id, bool isArray, BaseAST *exp, int level) {
-        BaseAST *da = new DefAST(type, id, isArray, exp, level);
+    static BaseAST *def(std::string type, Val id, BaseAST *exp, int level) {
+        BaseAST *da = new DefAST(type, id, exp, level);
         std::string strId = std::get<std::string>(id);
         if(symTable.checkId(strId, level)) {
             int size = getSize(type);
             // add entry
-            Entry entry(strId, isArray? ARR: VAR, type, 
+            Entry entry(strId, VAR, type, 
                         addrs[level], level, lexer->lineno(), size);
             symTable.insert(strId, entry);
             // update addrs
@@ -146,6 +146,40 @@ public:
 
         return da;
     }
+
+    // array def
+    static void arrDef(BaseAST *arr, std::string curType) {
+        arrAST *a = dynamic_cast<arrAST *>(arr);
+        a->dtype = curType; 
+        a->isDef = true; 
+        a->isAssign = false; 
+
+        // array name
+        BaseAST *node = arr;
+        int eleNum = 1;
+        while(!node->child.empty()) {
+            eleNum *= std::get<int>(node->child[0]->val);
+            node = node->child[1];
+        }
+        std::string strId = a->id;
+        if(symTable.checkId(strId, a->arrLevel)) {
+            int size = getSize(curType) * eleNum;
+            // add entry
+            Entry entry(strId, ARR, curType, 
+                        addrs[level], level, lexer->lineno(), size);
+            symTable.insert(strId, entry);
+            // update addrs
+            addrs[level] += size;
+
+            if(level >= 1) parent[level-1]->addChild(arr);
+            else root->addChild(arr);
+        }
+        // TODO: error recovery
+        else {
+
+        }
+    }
+
 };
 
 
@@ -310,7 +344,7 @@ public:
         BaseAST *ea = new UniOpAST("!", node->dtype, N_NOT);
         ea->child.push_back(node);
         if(std::get<std::string>(node->val) == "!") {
-            UniOpAST * n = dynamic_cast<UniOpAST *>(node);
+            UniOpAST *n = dynamic_cast<UniOpAST *>(node);
             n->isTop = false;
         }
         return ea;
@@ -367,6 +401,24 @@ public:
             ea = new AddrAST(val,type, G_VAR);
         return ea;
     }
+
+    static void arr_exp(BaseAST *arr, bool isAssign) {
+        arrAST *a = dynamic_cast<arrAST *>(arr);
+        a->isDef = false; 
+        a->isAssign = isAssign;
+
+        std::string strId = a->id;
+        // FIXME: store num of array-level in symbol table
+        if(symTable.isFind(strId)) {
+            a->arrLevel=symTable.table[strId].top().level;
+            a->dtype = symTable.table[strId].top().type;
+        }
+        // error recovery
+        else {
+            prtErr("undeclared identifer \'"+strId+"\'!");
+        }
+    }
+
 };
 class Br{
 public:
@@ -384,18 +436,39 @@ public:
         parent[level-1]->addChild(ra);
         parent.push_back(ra);
         ra->addChild(exp);
-        addrs[level] = 0;
+        addrs.push_back(0);
         return ra;
     }
-    static BaseAST *For_loop(BaseAST *exp1,BaseAST *exp2,BaseAST *exp3) {
-        BaseAST *ra = new LoopAST("for","for");
+    static BaseAST *For_loop() {
+        BaseAST *ra = new LoopAST("loop","for");
         parent[level-1]->addChild(ra);
         parent.push_back(ra);
-        ra->addChild(exp1);
-        ra->addChild(exp2);
-        ra->addChild(exp3);
-        addrs[level] = 0;
+        addrs.push_back(0);
         return ra;
+    }
+
+};
+
+class Arr
+{
+public:
+    static BaseAST *arr(BaseAST *exp, int arrLevel) {
+        BaseAST *aa = new arrAST("[]", "VOID", arrLevel);
+        aa->addChild(exp);
+        return aa;
+    }
+
+    static void setFstArr(BaseAST *arr, Val id) {
+        arrAST *a = dynamic_cast<arrAST *>(arr); 
+        a->id = std::get<std::string>(id);
+        a->dim = 1; 
+    }
+
+    static void setSucArr(BaseAST *arr_par, BaseAST *arr_chd) {
+        arrAST *a_par = dynamic_cast<arrAST *>(arr_par); 
+        arrAST *a_chd = dynamic_cast<arrAST *>(arr_chd);
+        a_par->id = a_chd->id;
+        a_par->dim = a_chd->dim + 1;
     }
 
 };
