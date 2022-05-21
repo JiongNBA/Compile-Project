@@ -1,0 +1,270 @@
+/* ----------------------------------------------------------
+ * file: parser.ypp
+ * author: Haofeng Yang 3190105301@zju.edu.cn
+ *         Yuesong Wang 3190105303@zju.edu.cn
+ *         Jiong   Li   3190105725@zju.edu.cn
+ * copyright: © 2022 authors. All rights reserved.
+ * ----------------------------------------------------------
+ * function: grammar analysis.
+ * description: according to tokens output a shift-reduce
+                parser.
+ * ----------------------------------------------------------
+ * create date:   2022/04/15 11:16 pm
+ * last modified: 2022/05/19 2:45 am
+ * ----------------------------------------------------------
+ * history: 2022/04/15 11:16 pm: create the file and create rough framework of parser
+ *          2022/04/23 00:04 am：add action to print the parse tree
+ *          2022/04/30 11:44 pm: add action in function,type,id,exp
+ *          2022/05/03 03:08 am  add action in def-stmt,uniop exp
+ *          2022/05/05 00:27 am: add action in exp
+ *          2022/05/06 03:16 am: add action in assign exp
+ *          2022/05/12 09:57 am: change the rule to improve function call
+ *          2022/05/13 10:19 pm: action to create array operator
+ *          2022/05/19 02:45 am: improve the code structure and add comments
+ */
+
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <utility>
+#include <FlexLexer.h>
+#include "../include/AST.h"
+#include "../include/SymTable.h"
+#include "../include/semantic.h"
+
+#define YYSTYPE BaseAST*
+
+extern FlexLexer *lexer;
+extern BaseAST *root;
+extern BaseAST *lastId;
+extern BaseAST *curAST;
+extern int yylex(void);
+extern SymTable symTable;
+
+int yyerror(std::string str);
+
+using namespace std;
+
+int level = 0;       // nested level
+SymTable symTable;   // AST symbol table
+std::string curType; // current data type
+std::vector<BaseAST *> parent;      // parent node of each level
+std::stack<BaseAST *> ids;          // id of each nest level
+std::stack<BaseAST *> conds;        // cond node for each nest level
+std::stack<BasicBlock *> loopStart; // start position of a loop
+std::stack<BasicBlock *> loopEnd;   // end position of a loop
+
+%}
+
+%token LEFT_PAR
+%token RIGHT_PAR
+%token LEFT_CURLY
+%token RIGHT_CURLY
+%token LEFT_SQUARE
+%token RIGHT_SQUARE
+%token COMMA
+%token SEMICOLON
+
+%token IF
+%token ELSE
+%token FOR
+%token WHILE
+%token RETURN
+%token BREAK
+%token CONTINUE
+
+%token ID
+%token NUM
+%token LITERAL
+%token CH
+
+%token INT
+%token FLOAT
+%token CHAR
+%token VOID
+
+%token ADD
+%token SUB
+%token MUL
+%token DIV
+%token ASSIGN
+%token NOT
+%token OR
+%token AND
+%token EQUAL
+%token UEQUAL
+%token GR
+%token GE
+%token LS
+%token LE
+%token ADDR
+
+%%
+doc: stmt       {}
+   ;
+stmt: stmt unit {}
+    | unit      {}
+    ;
+unit: def-stmt SEMICOLON {}
+    | func               { root->addChild($1); }
+    ;
+func: type ID LEFT_PAR { Func::func(curType, curAST->val); level++; delete curAST; } funcparlist { $$ = $5; }
+    ;
+funcparlist: parlist RIGHT_PAR compound { $$ = $3; }
+           | RIGHT_PAR compound         { $$ = $2; }
+           ;
+block: block stmt2 {}
+     | LEFT_CURLY  {}
+     ;
+compound: block RIGHT_CURLY { $$ = parent[level-1]; symTable.delTable(level--); parent.pop_back(); }    
+        ;
+
+stmt2: ctrl-stmt          { $$ = $1; }
+     | op-stmt SEMICOLON  {}
+     | ret-stmt SEMICOLON { $$ = $1; }
+     | BREAK SEMICOLON    { $$ = Br::Brstmt("break"); }
+     | CONTINUE SEMICOLON { $$ = Br::Brstmt("continue"); }
+     | SEMICOLON          {}
+     ;
+ctrl-stmt: cond-stmt  { $$ = $1; }
+         | for-stmt   {}
+         | while-stmt {}
+         ;
+op-stmt: exp-list {}
+       | def-stmt { $$ = $1;}
+       ;
+cond-stmt: if-stmt elif-list else-stmt { $$ = conds.top(); conds.pop(); }
+         ;
+if-stmt: IF LEFT_PAR exp RIGHT_PAR { BaseAST *cond = CondStmt::condStmt(); parent[level-1]->addChild(cond); BaseAST *ifstmt = CondStmt::ifStmt($3); cond->addChild(ifstmt); conds.push(cond); parent.push_back(ifstmt); level++; } block RIGHT_CURLY {symTable.delTable(level--); parent.pop_back(); }
+       ;                          
+else-stmt: ELSE { BaseAST *elsestmt = CondStmt::elseStmt(); conds.top()->addChild(elsestmt); parent.push_back(elsestmt); level++; } block RIGHT_CURLY { symTable.delTable(level--); parent.pop_back(); }
+         |      {}
+         ;
+elif-list: elif-list ELSE IF LEFT_PAR exp RIGHT_PAR { BaseAST *elifstmt = CondStmt::elifStmt($5); conds.top()->addChild(elifstmt); parent.push_back(elifstmt); level++; } block RIGHT_CURLY { symTable.delTable(level--); parent.pop_back(); }
+         | {}
+         ;
+
+for-stmt: FOR { $$ = Loop::For_loop(); level++; } LEFT_PAR op-stmt SEMICOLON exp { parent[level-1]->child.push_back($6); } SEMICOLON op-stmt RIGHT_PAR block RIGHT_CURLY { symTable.delTable(level); level--;parent.pop_back(); }
+        ;
+
+while-stmt: WHILE LEFT_PAR exp { $$ = Loop::While_loop($3); level++; } RIGHT_PAR block RIGHT_CURLY { symTable.delTable(level); level--;parent.pop_back(); }
+          ;
+          
+exp-list: exp-list COMMA exp { parent[level-1]->child.push_back($3); }
+        | exp                { parent[level-1]->child.push_back($1); }
+        ;
+def-stmt: type def-stmt2 { $$ = $2; }
+        ;
+def-stmt2: def-stmt2 COMMA def-stmt3 { $$ = $3; }
+         | def-stmt3                 { $$ = $1; }
+         ;
+def-stmt3: ID ASSIGN { ids.push(curAST); } exp { BaseAST *id = ids.top(); $$ = DefStmt::def(curType, id->val, $4, level); ids.pop(); delete id; }
+         | ID subsript-list { DefStmt::arrDef($2, curType); $$ = $2; }
+         | ID { $$ = DefStmt::def(curType, curAST->val, level); delete curAST; }
+         | ID subsript-list ASSIGN LEFT_CURLY varlist RIGHT_CURLY {}
+         ;
+subsript-list: subsript-list subsript { $2->addChild($1); $$ = $2; Arr::setSucArr($2, $1); }
+             | { ids.push(curAST); } subsript { $2->addChild(ids.top()); $$ = $2; Arr::setFstArr($2, ids.top()->val); ids.pop(); }
+             ;
+subsript: LEFT_SQUARE exp RIGHT_SQUARE { $$ = Arr::arr($2, level); }
+        ;
+ret-stmt: RETURN exp { $$ = RetStmt::ret($2); }
+        ;
+parlist: VOID      {}
+       | NEparlist {}
+       ;
+NEparlist: NEparlist COMMA dec-stmt {}
+       | dec-stmt  {}
+       ;
+dec-stmt: type ID { DecStmt::dec(curType, curAST->val, false); }                
+        | type ID LEFT_SQUARE RIGHT_SQUARE { DecStmt::dec(curType, curAST->val, true); }
+        ;
+type: INT   { curType = "INT";}
+    | FLOAT { curType = "FLOAT";}
+    | CHAR  { curType = "CHAR";}
+    | VOID  { curType = "VOID";}
+    ;
+varlist: varlist COMMA exp { ids.top()->child.push_back($3); }
+       | exp               { ids.top()->child.push_back($1); }
+       ;
+/**
+ * operator priority
+ * [ () ]
+ * [ func id ]
+ * [ ! -(uni) ]
+ * [ * / ]
+ * [ + - ]
+ * [ > < >= <= ]
+ * [ == != ]
+ * [ && ]
+ * [ || ] 
+ * [ & ]
+ */
+
+exp: ID ASSIGN { BaseAST *assign = Exp::assign_exp(curAST); ids.push(assign); } exp { BaseAST *assign = ids.top(); assign->child.push_back($4); $$ = assign; ids.pop(); }
+   | ID subsript-list ASSIGN exp { Exp::arr_exp($2, true); $2->addChild($4); $$ = $2; }
+   | exp0 { $$ = $1; }
+   ;
+exp0: exp0 OR exp1 { $$ = Exp::binary_exp($1,$3,B_OR,"OR"); }
+   | exp1          { $$ = $1; }
+   ;
+   
+exp1: exp1 AND exp2 { $$ = Exp::binary_exp($1,$3,B_AND,"AND"); }
+    | exp2          { $$ = $1; }
+    ;
+    
+exp2: exp2 EQUAL  exp3 { $$ = Exp::binary_exp($1,$3,B_EQ,"EQUAL"); }
+    | exp2 UEQUAL exp3 { $$ = Exp::binary_exp($1,$3,B_UEQ,"UEQUAL"); }
+    | exp3             { $$ = $1; }
+    ;
+    
+exp3: exp3 GR exp4 { $$ = Exp::binary_exp($1,$3,B_GR,"GR"); }
+    | exp3 GE exp4 { $$ = Exp::binary_exp($1,$3,B_GE,"GE");}
+    | exp3 LS exp4 { $$ = Exp::binary_exp($1,$3,B_LS,"LS"); }
+    | exp3 LE exp4 { $$ = Exp::binary_exp($1,$3,B_LE,"LE"); }
+    | exp4         { $$ = $1; }
+    ;
+
+exp4: exp4 ADD exp5 { $$ = Exp::binary_exp($1,$3,B_ADD,"ADD"); }
+    | exp4 SUB exp5 { $$ = Exp::binary_exp($1,$3,B_SUB,"SUB"); }
+    | exp5          { $$ = $1; }
+    ;
+    
+exp5: exp5 MUL exp6 { $$ = Exp::binary_exp($1,$3,B_MUL,"MUL"); }
+    | exp5 DIV exp6 { $$ = Exp::binary_exp($1,$3,B_DIV,"DIV"); }
+    | exp6          { $$ = $1; }
+    ;
+    
+exp6: SUB exp6 { $$ = Exp::sub_exp($2); }
+    | NOT exp6 { $$ = Exp::not_exp($2); }
+    | exp7     { $$ = $1; }
+    ;
+
+exp7: LEFT_PAR exp RIGHT_PAR { $$ = $2; }
+    | NUM { $$ = Exp::exp(curAST->val, curAST->dtype); delete curAST; }
+    | ID LEFT_PAR { BaseAST *fa = FuncCall::funcCall(lastId->val); ids.push(fa); } funvarlist{ $$ = $4; }
+    | ID subsript-list { Exp::arr_exp($2, false); $$ = $2; }
+    | ID { $$ = Exp::exp(curAST->val); delete curAST; }
+    | LITERAL { $$ = Exp::exp(curAST->val, curAST->dtype); delete curAST; }
+    | CH { $$ = Exp::exp(curAST->val, curAST->dtype); delete curAST; }
+    | ADDR ID { $$ = Exp::addr_exp(curAST->val); delete curAST; }
+    | ADDR ID subsript-list {}
+    ;
+
+funvarlist: varlist RIGHT_PAR { $$ = ids.top(); ids.pop(); }
+          | RIGHT_PAR         { $$ = ids.top(); ids.pop(); }
+          ;
+
+%%
+
+/**
+ * @brief error for illegal grammar
+ */
+int yyerror(string str)
+{ 
+    fprintf(stderr, "[ERROR] %s\n", lexer->YYText());
+    return 0;
+}
